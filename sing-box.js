@@ -1,4 +1,7 @@
-const { type, name } = $arguments
+const {
+  type,
+  name
+} = $arguments
 const compatible_outbound = {
   tag: 'COMPATIBLE',
   type: 'direct',
@@ -20,13 +23,18 @@ config.outbounds.map(i => {
   if (['auto'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies))
   }
+  if (['YouTube'].includes(i.tag)) {
+    i.outbounds.push(...getTags(proxies, /Hong Kong/i));
+    i.outbounds.push(...getTags(proxies, /Japan/i))
+
+  }
   if (['Australia'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Australia/i))
   }
   if (['Canada'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Canada/i))
   }
-    if (['French'].includes(i.tag)) {
+  if (['French'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /France/i))
   }
   if (['German'].includes(i.tag)) {
@@ -35,25 +43,25 @@ config.outbounds.map(i => {
   if (['HongKong'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Hong Kong/i))
   }
-    if (['TaiWan'].includes(i.tag)) {
+  if (['TaiWan'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Taiwan/i))
   }
-    if (['Japan'].includes(i.tag)) {
+  if (['Japan'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Japan/i))
   }
-    if (['Russia'].includes(i.tag)) {
+  if (['Russia'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Russia/i))
   }
-    if (['Singapore'].includes(i.tag)) {
+  if (['Singapore'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Singapore/i))
   }
   if (['SouthKorea'].includes(i.tag)) {
-    i.outbounds.push(...getTags(proxies, /Korea/i))
+    i.outbounds.push(...getTags(proxies, /South Korea/i))
   }
-      if (['UnitedKingdom'].includes(i.tag)) {
+  if (['UnitedKingdom'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /United Kingdom/i))
   }
-      if (['America'].includes(i.tag)) {
+  if (['America'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /United States/i))
   }
 })
