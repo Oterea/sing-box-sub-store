@@ -418,7 +418,6 @@
                 "French",
                 "German",
                 "HongKong",
-                "India",
                 "TaiWan",
                 "Japan",
                 "Russia",
@@ -432,16 +431,13 @@
             "tag": "auto",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "OpenAI",
             "type": "selector",
             "outbounds":
             [
-                "Australia",
                 "Singapore",
                 "Japan",
                 "America"
@@ -453,7 +449,6 @@
             "type": "urltest",
             "outbounds":
             [
-                "Australia",
                 "Singapore",
                 "Japan"
             ]
@@ -462,105 +457,73 @@
             "tag": "Australia",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "Canada",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "French",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "German",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "HongKong",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
-        },
-        {
-            "tag": "India",
-            "type": "urltest",
-            "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "TaiWan",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "Japan",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "Russia",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "Singapore",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "SouthKorea",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "UnitedKingdom",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "tag": "America",
             "type": "urltest",
             "outbounds":
-            [
-                "{all}"
-            ]
+            []
         },
         {
             "type": "direct",
