@@ -445,6 +445,12 @@
             "default": "America"
         },
         {
+            "tag": "YouTube",
+            "type": "selector",
+            "outbounds":
+            []
+        },
+        {
             "tag": "Netflix",
             "type": "urltest",
             "outbounds":
