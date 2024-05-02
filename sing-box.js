@@ -48,7 +48,7 @@ config.outbounds.map(i => {
     i.outbounds.push(...getTags(proxies, /Singapore/i))
   }
   if (['SouthKorea'].includes(i.tag)) {
-    i.outbounds.push(...getTags(proxies, /South Korea/i))
+    i.outbounds.push(...getTags(proxies, /Korea/i))
   }
       if (['UnitedKingdom'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /United Kingdom/i))
