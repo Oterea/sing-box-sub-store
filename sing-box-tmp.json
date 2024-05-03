@@ -408,11 +408,11 @@
     "outbounds":
     [
         {
-            "tag": "proxy",
+            "tag": "🛍️ proxy",
             "type": "selector",
             "outbounds":
             [
-                "auto",
+                "🧬 auto",
                 "🇦🇺 Australia",
                 "🇨🇦 Canada",
                 "🇫🇷 France",
@@ -428,13 +428,13 @@
             ]
         },
         {
-            "tag": "auto",
+            "tag": "🧬 auto",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "OpenAI",
+            "tag": "❀OpenAI",
             "type": "selector",
             "outbounds":
             [
@@ -445,13 +445,13 @@
             "default": "🇺🇸 United States"
         },
         {
-            "tag": "YouTube",
+            "tag": "❀YouTube",
             "type": "selector",
             "outbounds":
             []
         },
         {
-            "tag": "Netflix",
+            "tag": "❀Netflix",
             "type": "urltest",
             "outbounds":
             [
