@@ -24,7 +24,7 @@ config.outbounds.map(i => {
     i.outbounds.push(...getTags(proxies))
   }
   if (['YouTube'].includes(i.tag)) {
-    i.outbounds.push(...["Australia", "test"]));
+    i.outbounds.push("Australia", "test"));
     i.outbounds.push(...getTags(proxies, /Japan/i))
 
   }
