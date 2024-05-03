@@ -24,44 +24,42 @@ config.outbounds.map(i => {
     i.outbounds.push(...getTags(proxies))
   }
   if (['YouTube'].includes(i.tag)) {
-    i.outbounds.push(...["aaa"]);
-    i.outbounds.push(...getTags(proxies, /Japan/i))
-
+    i.outbounds.push(...["🇸🇬 Singapore", "🇯🇵 Japan"])
   }
-  if (['Australia'].includes(i.tag)) {
+  if (['🇦🇺 Australia'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Australia/i))
   }
-  if (['Canada'].includes(i.tag)) {
+  if (['🇨🇦 Canada'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Canada/i))
   }
-  if (['French'].includes(i.tag)) {
+  if (['🇫🇷 France'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /France/i))
   }
-  if (['German'].includes(i.tag)) {
-    i.outbounds.push(...getTags(proxies, /German/i))
+  if (['🇩🇪 Germany'].includes(i.tag)) {
+    i.outbounds.push(...getTags(proxies, /Germany/i))
   }
-  if (['HongKong'].includes(i.tag)) {
+  if (['🇭🇰 Hong Kong'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Hong Kong/i))
   }
-  if (['TaiWan'].includes(i.tag)) {
+  if (['🇨🇳 Taiwan'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Taiwan/i))
   }
-  if (['Japan'].includes(i.tag)) {
+  if (['🇯🇵 Japan'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Japan/i))
   }
-  if (['Russia'].includes(i.tag)) {
+  if (['🇷🇺 Russia'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Russia/i))
   }
-  if (['Singapore'].includes(i.tag)) {
+  if (['🇸🇬 Singapore'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /Singapore/i))
   }
-  if (['SouthKorea'].includes(i.tag)) {
-    i.outbounds.push(...getTags(proxies, /South Korea/i))
+  if (['🇰🇷 Korea'].includes(i.tag)) {
+    i.outbounds.push(...getTags(proxies, /Korea/i))
   }
-  if (['UnitedKingdom'].includes(i.tag)) {
+  if (['🇬🇧 United Kingdom'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /United Kingdom/i))
   }
-  if (['America'].includes(i.tag)) {
+  if (['🇺🇸 United States'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies, /United States/i))
   }
 })
