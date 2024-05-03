@@ -20,10 +20,10 @@ let proxies = await produceArtifact({
 config.outbounds.push(...proxies)
 
 config.outbounds.map(i => {
-  if (['auto'].includes(i.tag)) {
+  if (['🧬 auto'].includes(i.tag)) {
     i.outbounds.push(...getTags(proxies))
   }
-  if (['YouTube'].includes(i.tag)) {
+  if (['❀YouTube'].includes(i.tag)) {
     i.outbounds.push(...["🇸🇬 Singapore", "🇯🇵 Japan"])
   }
   if (['🇦🇺 Australia'].includes(i.tag)) {
