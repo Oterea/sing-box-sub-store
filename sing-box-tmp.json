@@ -413,18 +413,18 @@
             "outbounds":
             [
                 "auto",
-                "Australia",
-                "Canada",
-                "French",
-                "German",
-                "HongKong",
-                "TaiWan",
-                "Japan",
-                "Russia",
-                "Singapore",
-                "SouthKorea",
-                "UnitedKingdom",
-                "America"
+                "🇦🇺 Australia",
+                "🇨🇦 Canada",
+                "🇫🇷 France",
+                "🇩🇪 Germany",
+                "🇭🇰 Hong Kong",
+                "🇨🇳 Taiwan",
+                "🇯🇵 Japan",
+                "🇷🇺 Russia",
+                "🇸🇬 Singapore",
+                "🇰🇷 Korea",
+                "🇬🇧 United Kingdom",
+                "🇺🇸 United States"
             ]
         },
         {
@@ -438,11 +438,11 @@
             "type": "selector",
             "outbounds":
             [
-                "Singapore",
-                "Japan",
-                "America"
+                "🇸🇬 Singapore",
+                "🇯🇵 Japan",
+                "🇺🇸 United States"
             ],
-            "default": "America"
+            "default": "🇺🇸 United States"
         },
         {
             "tag": "YouTube",
@@ -455,78 +455,78 @@
             "type": "urltest",
             "outbounds":
             [
-                "Singapore",
-                "Japan"
+                "🇸🇬 Singapore",
+                "🇯🇵 Japan"
             ]
         },
         {
-            "tag": "Australia",
+            "tag": "🇦🇺 Australia",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "Canada",
+            "tag": "🇨🇦 Canada",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "French",
+            "tag": "🇫🇷 France",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "German",
+            "tag": "🇩🇪 Germany",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "HongKong",
+            "tag": "🇭🇰 Hong Kong",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "TaiWan",
+            "tag": "🇨🇳 Taiwan",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "Japan",
+            "tag": "🇯🇵 Japan",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "Russia",
+            "tag": "🇷🇺 Russia",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "Singapore",
+            "tag": "🇸🇬 Singapore",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "SouthKorea",
+            "tag": "🇰🇷 Korea",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "UnitedKingdom",
+            "tag": "🇬🇧 United Kingdom",
             "type": "urltest",
             "outbounds":
             []
         },
         {
-            "tag": "America",
+            "tag": "🇺🇸 United States",
             "type": "urltest",
             "outbounds":
             []
