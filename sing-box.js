@@ -4,7 +4,7 @@ const {
 } = $arguments
 const compatible_outbound = {
   tag: 'COMPATIBLE',
-  type: 'direct',
+  type: '🍬 direct',
 }
 
 let compatible
