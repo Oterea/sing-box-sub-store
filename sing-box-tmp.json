@@ -12,7 +12,7 @@
             "external_controller": "127.0.0.1:9090",
             "external_ui": "xd",
             "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
-            "external_ui_download_detour": "proxy",
+            "external_ui_download_detour": "🛍️ proxy",
             "default_mode": "Rule"
         }
     },
@@ -23,12 +23,12 @@
             {
                 "tag": "proxy_dns",
                 "address": "https://1.1.1.1/dns-query",
-                "detour": "proxy"
+                "detour": "🛍️ proxy"
             },
             {
                 "tag": "local_dns",
                 "address": "https://223.5.5.5/dns-query",
-                "detour": "direct"
+                "detour": "🍬 direct"
             },
             {
                 "tag": "block",
@@ -96,7 +96,7 @@
     "route":
     {
         "auto_detect_interface": true,
-        "final": "proxy",
+        "final": "🛍️ proxy",
         "rules":
         [
             {
@@ -123,7 +123,7 @@
             },
             {
                 "rule_set": "geosite-openai",
-                "outbound": "OpenAI"
+                "outbound": "❀ OpenAI"
             },
             {
                 "rule_set":
@@ -133,7 +133,7 @@
                     "geosite-youtube",
                     "geosite-github"
                 ],
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set":
@@ -141,7 +141,7 @@
                     "geoip-telegram",
                     "geosite-telegram"
                 ],
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set":
@@ -149,7 +149,7 @@
                     "geoip-twitter",
                     "geosite-twitter"
                 ],
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set":
@@ -157,11 +157,11 @@
                     "geoip-bilibili",
                     "geosite-bilibili"
                 ],
-                "outbound": "direct"
+                "outbound": "🍬 direct"
             },
             {
                 "rule_set": "geosite-tiktok",
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set":
@@ -169,11 +169,11 @@
                     "geoip-apple",
                     "geosite-apple"
                 ],
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set": "geosite-microsoft",
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set":
@@ -181,11 +181,11 @@
                     "geosite-hbo",
                     "geosite-primevideo"
                 ],
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set": "geosite-private",
-                "outbound": "direct"
+                "outbound": "🍬 direct"
             },
             {
                 "rule_set":
@@ -193,37 +193,37 @@
                     "geoip-netflix",
                     "geosite-netflix"
                 ],
-                "outbound": "Netflix"
+                "outbound": "❀ Netflix"
             },
             {
                 "ip_is_private": true,
-                "outbound": "direct"
+                "outbound": "🍬 direct"
             },
             {
                 "rule_set": "geosite-geolocation-!cn",
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             },
             {
                 "rule_set":
                 [
                     "geosite-cn"
                 ],
-                "outbound": "direct"
+                "outbound": "🍬 direct"
             },
             {
                 "rule_set":
                 [
                     "geoip-cn"
                 ],
-                "outbound": "direct"
+                "outbound": "🍬 direct"
             },
             {
                 "clash_mode": "Direct",
-                "outbound": "direct"
+                "outbound": "🍬 direct"
             },
             {
                 "clash_mode": "Global",
-                "outbound": "proxy"
+                "outbound": "🛍️ proxy"
             }
         ],
         "rule_set":
@@ -233,175 +233,175 @@
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geoip/google.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-google",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/google.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geoip-telegram",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geoip/telegram.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-telegram",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/telegram.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geoip-twitter",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geoip/twitter.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-twitter",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/twitter.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geoip-netflix",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geoip/netflix.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-netflix",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/netflix.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geoip-apple",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo-lite/geoip/apple.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-apple",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/apple.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geoip-bilibili",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo-lite/geoip/bilibili.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-bilibili",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/bilibili.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geoip-cn",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geoip/cn.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-cn",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/cn.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-geolocation-!cn",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/geolocation-!cn.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-private",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/private.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-openai",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/openai.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-youtube",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/youtube.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-github",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/github.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-tiktok",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/tiktok.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-microsoft",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/microsoft.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-hbo",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/hbo.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-primevideo",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/primevideo.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-category-games",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/private.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             },
             {
                 "tag": "geosite-category-ads-all",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://github.com/MetaCubeX/meta-rules-dat/raw/sing/geo/geosite/category-ads-all.srs",
-                "download_detour": "proxy"
+                "download_detour": "🛍️ proxy"
             }
         ]
     },
@@ -434,7 +434,7 @@
             []
         },
         {
-            "tag": "❀OpenAI",
+            "tag": "❀ OpenAI",
             "type": "selector",
             "outbounds":
             [
@@ -445,13 +445,13 @@
             "default": "🇺🇸 United States"
         },
         {
-            "tag": "❀YouTube",
+            "tag": "❀ YouTube",
             "type": "selector",
             "outbounds":
             []
         },
         {
-            "tag": "❀Netflix",
+            "tag": "❀ Netflix",
             "type": "urltest",
             "outbounds":
             [
@@ -533,7 +533,7 @@
         },
         {
             "type": "direct",
-            "tag": "direct"
+            "tag": "🍬 direct"
         },
         {
             "type": "dns",
