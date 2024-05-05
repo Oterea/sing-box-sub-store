@@ -20,10 +20,13 @@ let proxies = await produceArtifact({
 config.outbounds.push(...proxies)
 
 
-const countries = new Set();
+let countries = new Set();
 
 proxies.map(obj => {
-  const country = obj.tag.split(' ')[0];
+  list = obj.tag.split(' ');
+  flag = list[0];
+  name = list[1];
+  let country = flag + " " + name;
   countries.add(country);
 });
 
