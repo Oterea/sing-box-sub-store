@@ -41,7 +41,7 @@ all.outbounds.push(...getTags(proxies));
 openai.outbounds.push(...getTags(proxies, /Japan/i));
 netflix.outbounds.push(...getTags(proxies, /Japan/i));
 //===========================================
-config.outbounds.push(proxy, auto, all);
+config.outbounds.push(proxy, auto, all, openai, netflix);
 countries.forEach(j => {
   let countryPolicy = new Object();
   countryPolicy.tag = j;
