@@ -357,33 +357,6 @@
         {
             "type": "block",
             "tag": "block"
-        },
-
-        {
-            "tag": "❀ OpenAI",
-            "type": "selector",
-            "outbounds":
-            [
-                "🇸🇬 Singapore",
-                "🇯🇵 Japan",
-                "🇺🇸 United States"
-            ],
-            "default": "🇺🇸 United States"
-        },
-        {
-            "tag": "❀ YouTube",
-            "type": "selector",
-            "outbounds":
-            []
-        },
-        {
-            "tag": "❀ Netflix",
-            "type": "urltest",
-            "outbounds":
-            [
-                "🇸🇬 Singapore",
-                "🇯🇵 Japan"
-            ]
         }
     ]
 }
