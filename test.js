@@ -23,9 +23,9 @@ config.outbounds.push(...proxies)
 let countries = new Set();
 
 proxies.map(obj => {
-  list = obj.tag.split(' ');
-  flag = list[0];
-  name = list[1];
+  let list = obj.tag.split(' ');
+  let flag = list[0];
+  let name = list[1];
   let country = flag + " " + name;
   countries.add(country);
 });
