@@ -17,7 +17,7 @@ let proxies = await produceArtifact({
 })
 
 
-config.outbounds.push(...proxies)
+
 
 
 let countries = new Set();
@@ -44,10 +44,7 @@ countries.forEach(j => {
       let regex = new RegExp(regexPattern, 'i');
       i.outbounds.push(...getTags(proxies, regex));
     }
-
-
   })
-
 });
 
 
@@ -61,6 +58,7 @@ config.outbounds.forEach(outbound => {
     outbound.outbounds.push(compatible_outbound.tag);
   }
 });
+config.outbounds.push(...proxies)
 
 $content = JSON.stringify(config, null, 2)
 
