@@ -17,24 +17,35 @@ let proxies = await produceArtifact({
 })
 
 
+// proxy 节点 tag 命令规则 🇸🇬 Singapore 01，执行操作后对应策略组tag命名规则 🇸🇬 Singapore
 
 let countries = new Set();
 
 proxies.map(obj => {
-  let list = obj.tag.split(' ');
-  let country = list.slice(0, -1).join(' ');
-
-  countries.add(country);
+  // 除去节点标号作为对应策略组的tag, eg:🇸🇬 Singapore
+  countries.add(obj.tag.split(' ').slice(0, -1).join(' '));
 });
-console.log(countries)
 
+policyTagList = ["🍀 all", "🛍️ proxy", "🍬 direct", "🧬 auto",  "🇨🇳 Taiwan"];
+function Policy(tag, type) {
+  this.tag = tag;
+  this.type = type;
+  this.outbounds = [];
+}
+
+let proxy = new Policy("🛍️ proxy", "selector");
+let auto = new Policy("🧬 auto", "urltest");
+let all = new Policy("🍀 all", "selector");
+
+config.outbounds.push(proxy, auto, all);
 countries.forEach(j => {
-  let a = new Object();
-  a.tag = j;
-  a.type = 'urltest'
-  a.outbounds = []
-  config.outbounds.push(a)
-
+  let countryPolicy = new Object();
+  countryPolicy.tag = j;
+  countryPolicy.type = 'urltest';
+  countryPolicy.outbounds = [];
+  //
+  config.outbounds.push(countryPolicy);
+  //
   config.outbounds.map(i => {
     if (j == i.tag) {
       let regexPattern = i.tag;
@@ -43,6 +54,10 @@ countries.forEach(j => {
     }
   })
 });
+
+proxy.outbounds.push("🧬 auto", "🍬 direct");
+auto.outbounds.push(...countries);
+all.outbounds.push(...proxies);
 
 
 
