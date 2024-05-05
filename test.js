@@ -31,17 +31,15 @@ proxies.map(obj => {
 });
 console.log(countries)
 
-countries.forEach(country => {
-  let a = {
-    "tag": "",
-    "type": "urltest",
-    "outbounds": []
-  };
-  a.tag = country;
+countries.forEach(j => {
+  let a = new Object();
+  a.tag = j;
+  a.type = 'urltest'
+  a.outbounds=[]
   config.outbounds.push(a)
 
   config.outbounds.map(i => {
-    if (country == i.tag) {
+    if (j == i.tag) {
       let regexPattern = i.tag;
       let regex = new RegExp(regexPattern, 'i');
       i.outbounds.push(...getTags(proxies, regex));
