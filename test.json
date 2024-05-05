@@ -22,7 +22,7 @@
         [
             {
                 "tag": "proxy_dns",
-                "address": "https://1.1.1.1/dns-query",
+                "address": "https://8.8.8.8/dns-query",
                 "detour": "🛍️ proxy"
             },
             {
@@ -346,13 +346,19 @@
     },
     "outbounds":
     [
-
         {
-            "tag": "🍀 all",
-            "type": "selector",
-            "outbounds":
-            []
+            "type": "direct",
+            "tag": "🍬 direct"
         },
+        {
+            "type": "dns",
+            "tag": "dns-out"
+        },
+        {
+            "type": "block",
+            "tag": "block"
+        },
+
         {
             "tag": "❀ OpenAI",
             "type": "selector",
@@ -378,25 +384,6 @@
                 "🇸🇬 Singapore",
                 "🇯🇵 Japan"
             ]
-        },
-        {
-            "tag": "🇦🇺 Australia aaa",
-            "type": "urltest",
-            "outbounds":
-            []
-        },
-       
-        {
-            "type": "direct",
-            "tag": "🍬 direct"
-        },
-        {
-            "type": "dns",
-            "tag": "dns-out"
-        },
-        {
-            "type": "block",
-            "tag": "block"
         }
     ]
 }
