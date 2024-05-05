@@ -33,7 +33,7 @@ console.log(countries)
 
 countries.forEach(country => {
   let a = {
-    "tag": country,
+    "tag": "country",
     "type": "urltest",
     "outbounds": []
   };
