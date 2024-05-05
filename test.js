@@ -29,6 +29,7 @@ proxies.map(obj => {
   let country = flag + " " + name;
   countries.add(country);
 });
+console.log(countries)
 
 countries.forEach(country => {
   let a = {
@@ -39,11 +40,9 @@ countries.forEach(country => {
   config.outbounds.push(a)
 
   config.outbounds.map(i => {
-
-
     if (country == i.tag) {
-      const regexPattern = i.tag;
-      const regex = new RegExp(regexPattern, 'i');
+      let regexPattern = i.tag;
+      let regex = new RegExp(regexPattern, 'i');
       i.outbounds.push(...getTags(proxies, regex));
     }
 
