@@ -18,15 +18,12 @@ let proxies = await produceArtifact({
 
 
 
-
-
 let countries = new Set();
 
 proxies.map(obj => {
   let list = obj.tag.split(' ');
-  let flag = list[0];
-  let name = list[1];
-  let country = flag + " " + name;
+  let country = list.slice(0, -1).join(' ');
+
   countries.add(country);
 });
 console.log(countries)
@@ -35,7 +32,7 @@ countries.forEach(j => {
   let a = new Object();
   a.tag = j;
   a.type = 'urltest'
-  a.outbounds=[]
+  a.outbounds = []
   config.outbounds.push(a)
 
   config.outbounds.map(i => {
