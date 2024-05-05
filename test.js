@@ -6,7 +6,6 @@ const compatible_outbound = {
   tag: 'COMPATIBLE',
   type: '🍬 direct',
 }
-
 let compatible
 let config = JSON.parse($files[0])
 let proxies = await produceArtifact({
@@ -15,28 +14,33 @@ let proxies = await produceArtifact({
   platform: 'sing-box',
   produceType: 'internal',
 })
-
-
 // proxy 节点 tag 命令规则 🇸🇬 Singapore 01，执行操作后对应策略组tag命名规则 🇸🇬 Singapore
-
 let countries = new Set();
-
 proxies.map(obj => {
   // 除去节点标号作为对应策略组的tag, eg:🇸🇬 Singapore
   countries.add(obj.tag.split(' ').slice(0, -1).join(' '));
 });
+policyTagList = ["🍀 all", "🛍️ proxy", "🍬 direct", "🧬 auto", "🇨🇳 Taiwan"];
 
-policyTagList = ["🍀 all", "🛍️ proxy", "🍬 direct", "🧬 auto",  "🇨🇳 Taiwan"];
 function Policy(tag, type) {
   this.tag = tag;
   this.type = type;
   this.outbounds = [];
 }
-
+//===========================================
 let proxy = new Policy("🛍️ proxy", "selector");
 let auto = new Policy("🧬 auto", "urltest");
 let all = new Policy("🍀 all", "selector");
-
+let openai = new Policy("❀ OpenAI", "selector");
+let netflix = new Policy("❀ Netflix", "urltest");
+//===========================================
+proxy.outbounds.push("🧬 auto", "🍬 direct");
+auto.outbounds.push(...countries);
+all.outbounds.push(...getTags(proxies));
+// 默认日本节点
+openai.outbounds.push(...getTags(proxies, /Japan/i));
+netflix.outbounds.push(...getTags(proxies, /Japan/i));
+//===========================================
 config.outbounds.push(proxy, auto, all);
 countries.forEach(j => {
   let countryPolicy = new Object();
@@ -54,13 +58,7 @@ countries.forEach(j => {
     }
   })
 });
-
-proxy.outbounds.push("🧬 auto", "🍬 direct");
-auto.outbounds.push(...countries);
-all.outbounds.push(...proxies);
-
-
-
+//===========================================
 config.outbounds.forEach(outbound => {
   if (Array.isArray(outbound.outbounds) && outbound.outbounds.length === 0) {
     if (!compatible) {
