@@ -33,7 +33,7 @@ function Policy(tag, type) {
 //===========================================
 let proxy = new Policy("🛍️ proxy", "selector");
 let auto = new Policy("🧬 auto", "urltest");
-let all = new Policy(nodeInfoTag, "selector");
+let all = new Policy("🍀 all", "selector");
 let openai = new Policy("❀ OpenAI", "selector");
 let netflix = new Policy("❀ Netflix", "urltest");
 
