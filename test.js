@@ -15,7 +15,7 @@ let originProxies = await produceArtifact({
   produceType: 'internal',
 })
 // 提取和去除包含流量信息的节点
-let nodeInfoTag = getTags(originProxies,/GB/i);
+let nodeInfoTag = getTags(originProxies,/GB/i)[0];
 let proxies = removeProxiesByRegex(originProxies,/GB/i)
 // proxy 节点 tag 命令规则 🇸🇬 Singapore 01，执行操作后对应策略组tag命名规则 🇸🇬 Singapore
 let countries = new Set();
@@ -33,7 +33,7 @@ function Policy(tag, type) {
 //===========================================
 let proxy = new Policy("🛍️ proxy", "selector");
 let auto = new Policy("🧬 auto", "urltest");
-let all = new Policy("🍀 all", "selector");
+let all = new Policy(nodeInfoTag, "selector");
 let openai = new Policy("❀ OpenAI", "selector");
 let netflix = new Policy("❀ Netflix", "urltest");
 
