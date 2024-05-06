@@ -75,7 +75,7 @@ async function operator(proxies = [], targetPlatform, env) {
     const showT = flowTransfer(Math.abs(show))
     showT.value = show < 0 ? '-' + showT.value : showT.value
     const totalT = flowTransfer(total)
-    let name = `流量${showT.value}${showT.unit}||${totalT.value}${totalT.unit}`
+    let name = `${showT.value}${showT.unit}|${totalT.value}${totalT.unit}`
     if (remainingDays) {
       name = `${name} | ${remainingDays} 天`
     }
