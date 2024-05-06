@@ -8,15 +8,15 @@ const compatible_outbound = {
 }
 let compatible
 let config = JSON.parse($files[0])
-let proxies = await produceArtifact({
+let originProxies = await produceArtifact({
   name,
   type: /^1$|col/i.test(type) ? 'collection' : 'subscription',
   platform: 'sing-box',
   produceType: 'internal',
 })
 // 提取和去除包含流量信息的节点
-let nodeInfoTag = getTags(proxies,/流量/i);
-proxies = removeProxiesByRegex(proxies,/流量/i)
+let nodeInfoTag = getTags(originProxies,/流量/i);
+let proxies = removeProxiesByRegex(originProxies,/流量/i)
 // proxy 节点 tag 命令规则 🇸🇬 Singapore 01，执行操作后对应策略组tag命名规则 🇸🇬 Singapore
 let countries = new Set();
 proxies.map(obj => {
