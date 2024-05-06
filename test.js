@@ -33,7 +33,7 @@ function Policy(tag, type) {
 //===========================================
 let proxy = new Policy("🛍️ proxy", "selector");
 let auto = new Policy("🧬 auto", "urltest");
-let all = new Policy("🍀 all", "selector");
+let all = new Policy(nodeInfoTag, "selector");
 let openai = new Policy("❀ OpenAI", "selector");
 let netflix = new Policy("❀ Netflix", "urltest");
 
@@ -47,7 +47,7 @@ netflix.outbounds.push(...getTags(proxies, /Japan/i));
 //===========================================
 config.outbounds.push(proxy, auto, all, openai, netflix);
 countries.forEach(j => {
-  let country = Policy(j, "urltest")
+  let country = new Policy(j, "urltest")
   //
   config.outbounds.push(country);
   //
