@@ -33,11 +33,12 @@ function Policy(tag, type) {
 //===========================================
 let proxy = new Policy("🛍️ proxy", "selector");
 let auto = new Policy("🧬 auto", "urltest");
-let all = new Policy("🍀 all", "selector");
+let all = new Policy(nodeInfoTag, "selector");
 let openai = new Policy("❀ OpenAI", "selector");
 let netflix = new Policy("❀ Netflix", "urltest");
+
 //===========================================
-proxy.outbounds.push("🧬 auto", "🍬 direct");
+proxy.outbounds.push("🧬 auto", ...countries);
 auto.outbounds.push(...countries);
 all.outbounds.push(...getTags(proxies));
 // 默认日本节点
@@ -46,12 +47,9 @@ netflix.outbounds.push(...getTags(proxies, /Japan/i));
 //===========================================
 config.outbounds.push(proxy, auto, all, openai, netflix);
 countries.forEach(j => {
-  let countryPolicy = new Object();
-  countryPolicy.tag = j;
-  countryPolicy.type = 'urltest';
-  countryPolicy.outbounds = [];
+  let country = Policy(j, "urltest")
   //
-  config.outbounds.push(countryPolicy);
+  config.outbounds.push(country);
   //
   config.outbounds.map(i => {
     if (j == i.tag) {
