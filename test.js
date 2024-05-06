@@ -14,6 +14,9 @@ let proxies = await produceArtifact({
   platform: 'sing-box',
   produceType: 'internal',
 })
+// 提取和去除包含流量信息的节点
+let nodeInfoTag = getTags(proxies,/流量/i);
+proxies = removeProxiesByRegex(proxies,/流量/i)
 // proxy 节点 tag 命令规则 🇸🇬 Singapore 01，执行操作后对应策略组tag命名规则 🇸🇬 Singapore
 let countries = new Set();
 proxies.map(obj => {
@@ -71,6 +74,13 @@ config.outbounds.forEach(outbound => {
 config.outbounds.push(...proxies)
 
 $content = JSON.stringify(config, null, 2)
+
+function removeProxiesByRegex(proxies, regex) {
+    return proxies.filter(proxy => !regex.test(proxy.tag));
+}
+
+
+
 
 function getTags(proxies, regex) {
   return (regex ? proxies.filter(p => regex.test(p.tag)) : proxies).map(p => p.tag)
