@@ -32,20 +32,17 @@ function Policy(tag, type) {
 }
 //===========================================
 let proxy = new Policy("🛍️ proxy", "selector");
-let auto = new Policy("🧬 auto", "urltest");
-let all = new Policy("🍀 all", "selector");
+let auto = new Policy("🧬 auto", "selector");
 let openai = new Policy("❀ OpenAI", "selector");
 let netflix = new Policy("❀ Netflix", "urltest");
-
 //===========================================
 proxy.outbounds.push("🧬 auto", ...countries);
-auto.outbounds.push(...countries);
-all.outbounds.push(...getTags(proxies));
+auto.outbounds.push(...getTags(proxies));
 // 默认日本节点
 openai.outbounds.push(...getTags(proxies, /Japan/i));
 netflix.outbounds.push(...getTags(proxies, /Japan/i));
 //===========================================
-config.outbounds.push(proxy, auto, all, openai, netflix);
+config.outbounds.push(proxy, auto, openai, netflix);
 countries.forEach(j => {
   let country = new Policy(j, "urltest")
   //
