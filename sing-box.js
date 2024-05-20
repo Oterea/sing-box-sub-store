@@ -4,7 +4,7 @@ const {
 } = $arguments
 const compatible_outbound = {
   tag: 'COMPATIBLE',
-  type: '🍬 direct',
+  type: 'direct',
 }
 let compatible
 let config = JSON.parse($files[0])
@@ -31,18 +31,18 @@ function Policy(tag, type) {
   this.outbounds = [];
 }
 //===========================================
-let proxy = new Policy("🛍️ proxy", "selector");
-let auto = new Policy("🧬 auto", "urltest");
-let openai = new Policy("❀ OpenAI", "selector");
-let netflix = new Policy("❀ Netflix", "urltest");
+let proxy = new Policy("proxy", "selector");
+let auto = new Policy("auto", "urltest");
+let openai = new Policy("openai", "urltest");
+
 //===========================================
-proxy.outbounds.push("🧬 auto", ...countries);
+proxy.outbounds.push("auto", ...countries);
 auto.outbounds.push(...getTags(proxies));
 // 默认日本节点
-openai.outbounds.push(...getTags(proxies, /Japan/i));
-netflix.outbounds.push(...getTags(proxies, /Japan/i));
+openai.outbounds.push(...getTags(proxies, /?!.*taiwan/i));
+openai.outbounds.push(...getTags(proxies, /?!.*hong kong/i));
 //===========================================
-config.outbounds.push(proxy, auto, openai, netflix);
+config.outbounds.push(proxy, auto, openai);
 countries.forEach(j => {
   let country = new Policy(j, "urltest")
   //
