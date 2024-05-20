@@ -109,10 +109,6 @@
     "outbounds":
     [
         {
-            "tag": "openai",
-            "type": "urltest"
-        },
-        {
             "type": "direct",
             "tag": "direct"
         },
