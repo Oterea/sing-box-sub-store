@@ -38,9 +38,9 @@ let openai = new Policy("openai", "urltest");
 //===========================================
 proxy.outbounds.push("auto", ...countries);
 auto.outbounds.push(...getTags(proxies));
-// 默认日本节点
-openai.outbounds.push(...getTags(proxies, /?!.*taiwan/i));
-openai.outbounds.push(...getTags(proxies, /?!.*hong kong/i));
+// 删除节点
+openai.outbounds.push(...getTags(proxies, /(taiwan|hong kong)/i));
+
 //===========================================
 config.outbounds.push(proxy, auto, openai);
 countries.forEach(j => {
@@ -75,7 +75,9 @@ function removeProxiesByRegex(proxies, regex) {
 }
 
 
-
+function getOtherTags(proxies, regex) {
+  return (regex ? proxies.filter(p => !regex.test(p.tag)) : proxies).map(p => p.tag)
+}
 
 function getTags(proxies, regex) {
   return (regex ? proxies.filter(p => regex.test(p.tag)) : proxies).map(p => p.tag)
