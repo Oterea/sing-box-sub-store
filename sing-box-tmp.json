@@ -154,13 +154,6 @@
             {
                 "rule_set":
                 [
-                    "geosite-openai"
-                ],
-                "outbound": "proxy"
-            },
-            {
-                "rule_set":
-                [
                     "geosite-category-ads-all"
                 ],
                 "outbound": "block"
