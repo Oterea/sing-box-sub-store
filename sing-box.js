@@ -33,7 +33,7 @@ function Policy(tag, type) {
 //===========================================
 let proxy = new Policy("proxy", "selector");
 let auto = new Policy("auto", "urltest");
-let openai = new Policy("openai", "selector");
+let openai = new Policy("openai", "urltest");
 
 //===========================================
 proxy.outbounds.push("auto", ...countries);
