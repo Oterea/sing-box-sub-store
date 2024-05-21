@@ -132,6 +132,13 @@
                 "outbound": "dns-out"
             },
             {
+                "rule_set":
+                [
+                    "geosite-category-ads-all"
+                ],
+                "outbound": "block"
+            },
+            {
                 "ip_is_private": true,
                 "outbound": "direct"
             },
@@ -154,9 +161,9 @@
             {
                 "rule_set":
                 [
-                    "geosite-category-ads-all"
+                    "geosite-openai"
                 ],
-                "outbound": "block"
+                "outbound": "openai"
             }
         ],
         "rule_set":
