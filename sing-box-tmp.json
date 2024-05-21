@@ -156,7 +156,7 @@
                 [
                     "geosite-openai"
                 ],
-                "outbound": "openai"
+                "outbound": "proxy"
             },
             {
                 "rule_set":
