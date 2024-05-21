@@ -42,7 +42,7 @@ auto.outbounds.push(...getTags(proxies));
 openai.outbounds.push(...getOtherTags(proxies, /(taiwan|hong kong)/i));
 
 //===========================================
-config.outbounds.push(proxy, auto, openai);
+config.outbounds.push(proxy, auto);
 countries.forEach(j => {
   let country = new Policy(j, "urltest")
   //
