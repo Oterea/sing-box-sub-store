@@ -123,7 +123,7 @@
             },
             {
                 "rule_set": "geosite-openai",
-                "outbound": "❀ OpenAI"
+                "outbound": "openai"
             },
             {
                 "rule_set":
@@ -175,14 +175,7 @@
                 "rule_set": "geosite-private",
                 "outbound": "🍬 direct"
             },
-            {
-                "rule_set":
-                [
-                    "geoip-netflix",
-                    "geosite-netflix"
-                ],
-                "outbound": "❀ Netflix"
-            },
+ 
             {
                 "ip_is_private": true,
                 "outbound": "🍬 direct"
