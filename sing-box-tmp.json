@@ -47,32 +47,16 @@
         "rules":
         [
             {
-                "outbound":
-                [
-                    "any"
-                ],
+                "outbound": "any",
                 "server": "dns-local"
             },
             {
-                "domain_suffix":
-                [
-                    ".cn"
-                ],
+                "rule_set": "geosite-cn",
                 "server": "dns-local"
             },
             {
-                "rule_set":
-                [
-                    "geosite-cn"
-                ],
-                "server": "dns-local"
-            },
-            {
-                "rule_set":
-                [
-                    "geosite-category-ads-all"
-                ],
-                "server": "block"
+                "rule_set": "geosite-geolocation-!cn",
+                "server": "dns-remote"
             },
             {
                 "clash_mode": "Direct",
@@ -84,7 +68,7 @@
             }
         ],
         "final": "dns-remote",
-        "strategy": "",
+        "strategy": "ipv4_only",
         "disable_cache": false,
         "disable_expire": false
     },
@@ -106,21 +90,6 @@
             "udp_timeout": 300
         }
     ],
-    "outbounds":
-    [
-        {
-            "type": "direct",
-            "tag": "direct"
-        },
-        {
-            "type": "block",
-            "tag": "block"
-        },
-        {
-            "type": "dns",
-            "tag": "dns-out"
-        }
-    ],
     "route":
     {
         "auto_detect_interface": true,
@@ -134,45 +103,125 @@
             {
                 "rule_set":
                 [
-                    "geosite-category-ads-all"
+                    "geosite-openai"
                 ],
-                "outbound": "block"
+                "outbound": "openai"
+            },
+            {
+                "rule_set":
+                [
+                    "geosite-youtube"
+                ],
+                "outbound": "proxy"
+            },
+            {
+                "rule_set":
+                [
+                    "geosite-github"
+                ],
+                "outbound": "proxy"
+            },
+            {
+                "rule_set":
+                [
+                    "geoip-telegram",
+                    "geosite-telegram"
+                ],
+                "outbound": "proxy"
+            },
+            {
+                "rule_set":
+                [
+                    "geoip-bilibili",
+                    "geosite-bilibili"
+                ],
+                "outbound": "direct"
+            },
+            {
+                "rule_set":
+                [
+                    "geoip-apple",
+                    "geosite-apple"
+                ],
+                "outbound": "proxy"
+            },
+            {
+                "rule_set": "geosite-private",
+                "outbound": "direct"
             },
             {
                 "ip_is_private": true,
                 "outbound": "direct"
             },
             {
-                "domain_suffix":
+                "rule_set": "geosite-geolocation-!cn",
+                "outbound": "proxy"
+            },
+            {
+                "rule_set":
                 [
-                    ".cn"
+                    "geosite-cn"
                 ],
                 "outbound": "direct"
             },
             {
                 "rule_set":
                 [
-                    "geoip-cn",
-                    "geosite-cn",
-                    "geosite-private"
+                    "geoip-cn"
                 ],
                 "outbound": "direct"
             },
             {
-                "rule_set":
-                [
-                    "geosite-openai"
-                ],
-                "outbound": "openai"
+                "clash_mode": "Direct",
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "Global",
+                "outbound": "proxy"
             }
         ],
         "rule_set":
         [
             {
-                "tag": "geosite-openai",
+                "tag": "geoip-telegram",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/telegram.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-telegram",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/telegram.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geoip-apple",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo-lite/geoip/apple.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-apple",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/apple.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geoip-bilibili",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo-lite/geoip/bilibili.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-bilibili",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bilibili.srs",
                 "download_detour": "direct"
             },
             {
@@ -190,10 +239,38 @@
                 "download_detour": "direct"
             },
             {
+                "tag": "geosite-geolocation-!cn",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/geolocation-!cn.srs",
+                "download_detour": "direct"
+            },
+            {
                 "tag": "geosite-private",
                 "type": "remote",
                 "format": "binary",
                 "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/private.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-openai",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-youtube",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/youtube.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-github",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
                 "download_detour": "direct"
             },
             {
@@ -204,5 +281,20 @@
                 "download_detour": "direct"
             }
         ]
-    }
+    },
+    "outbounds":
+    [
+        {
+            "type": "direct",
+            "tag": "direct"
+        },
+        {
+            "type": "dns",
+            "tag": "dns-out"
+        },
+        {
+            "type": "block",
+            "tag": "block"
+        }
+    ]
 }
