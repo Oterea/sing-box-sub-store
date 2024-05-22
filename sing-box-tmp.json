@@ -48,19 +48,8 @@
                 "server": "dns-local"
             },
             {
-                "type": "logical",
-                "mode": "and",
-                "rules":
-                [
-                    {
-                        "rule_set": "geosite-geolocation-!cn",
-                        "invert": true
-                    },
-                    {
-                        "rule_set": "geoip-cn"
-                    }
-                ],
-                "server": "dns-local"
+                "rule_set": "geosite-geolocation-!cn",
+                "server": "dns-remote"
             }
         ],
         "final": "dns-remote",
@@ -72,11 +61,26 @@
             "type": "tun",
             "stack": "system",
             "inet4_address": "172.19.0.1/30",
-            "mtu": 1420,
+            "mtu": 9000,
             "auto_route": true,
             "strict_route": false,
             "sniff": true,
-            "sniff_override_destination": false
+            "sniff_override_destination": false,
+            "platform":
+            {
+                "http_proxy":
+                {
+                    "enabled": true,
+                    "server": "127.0.0.1",
+                    "server_port": 2080
+                }
+            }
+        },
+        {
+            "type": "mixed",
+            "listen": "127.0.0.1",
+            "listen_port": 2080,
+            "sniff": true
         }
     ],
     "route":
