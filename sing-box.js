@@ -39,7 +39,7 @@ let openai = new Policy("openai", "urltest");
 proxy.outbounds.push("auto", ...countries);
 auto.outbounds.push(...getTags(proxies));
 // 删除节点
-openai.outbounds.push(...getOtherTags(proxies, /(taiwan|hong kong)/i));
+openai.outbounds.push(...getOtherTags(proxies, /(hong kong)/i));
 
 //===========================================
 config.outbounds.push(proxy, auto, openai);
