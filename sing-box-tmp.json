@@ -100,14 +100,6 @@
                 "outbound": "dns-out"
             },
             {
-                "clash_mode": "Direct",
-                "outbound": "direct"
-            },
-            {
-                "clash_mode": "Global",
-                "outbound": "proxy"
-            },
-            {
                 "rule_set":
                 [
                     "geosite-openai"
