@@ -44,14 +44,6 @@
                 "server": "dns-local"
             },
             {
-                "clash_mode": "Direct",
-                "server": "dns-local"
-            },
-            {
-                "clash_mode": "Global",
-                "server": "dns-remote"
-            },
-            {
                 "rule_set": "geosite-cn",
                 "server": "dns-local"
             },
