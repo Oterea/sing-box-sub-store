@@ -1,7 +1,7 @@
 {
     "log":
     {
-        "disabled": false,
+        "disabled": true,
         "level": "warn",
         "timestamp": true
     },
@@ -14,13 +14,6 @@
             "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
             "external_ui_download_detour": "proxy",
             "default_mode": "Rule"
-        },
-        "cache_file":
-        {
-            "enabled": true,
-            "path": "cache.db",
-            "cache_id": "mycacheid",
-            "store_fakeip": true
         }
     },
     "dns":
@@ -28,16 +21,16 @@
         "servers":
         [
             {
-                "tag": "dns-local",
-                "address": "https://223.5.5.5/dns-query",
-                "strategy": "ipv4_only",
-                "detour": "direct"
-            },
-            {
                 "tag": "dns-remote",
                 "address": "https://1.1.1.1/dns-query",
                 "strategy": "ipv4_only",
                 "detour": "proxy"
+            },
+            {
+                "tag": "dns-local",
+                "address": "https://223.5.5.5/dns-query",
+                "strategy": "ipv4_only",
+                "detour": "direct"
             },
             {
                 "tag": "block",
@@ -51,26 +44,35 @@
                 "server": "dns-local"
             },
             {
-                "rule_set": "geosite-cn",
-                "server": "dns-local"
-            },
-            {
-                "rule_set": "geosite-geolocation-!cn",
-                "server": "dns-remote"
-            },
-            {
                 "clash_mode": "Direct",
                 "server": "dns-local"
             },
             {
                 "clash_mode": "Global",
                 "server": "dns-remote"
+            },
+            {
+                "rule_set": "geosite-cn",
+                "server": "dns-local"
+            },
+            {
+                "type": "logical",
+                "mode": "and",
+                "rules":
+                [
+                    {
+                        "rule_set": "geosite-geolocation-!cn",
+                        "invert": true
+                    },
+                    {
+                        "rule_set": "geoip-cn"
+                    }
+                ],
+                "server": "dns-local"
             }
         ],
         "final": "dns-remote",
-        "strategy": "ipv4_only",
-        "disable_cache": false,
-        "disable_expire": false
+        "strategy": "ipv4_only"
     },
     "inbounds":
     [
@@ -78,12 +80,9 @@
             "type": "tun",
             "tag": "tun-in",
             "stack": "system",
-            "interface_name": "utun",
             "inet4_address": "172.19.0.1/30",
-            "domain_strategy": "",
             "mtu": 1420,
             "auto_route": true,
-            "strict_route": true,
             "sniff": true,
             "sniff_timeout": "300ms",
             "sniff_override_destination": true,
@@ -99,6 +98,14 @@
             {
                 "protocol": "dns",
                 "outbound": "dns-out"
+            },
+            {
+                "clash_mode": "Direct",
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "Global",
+                "outbound": "proxy"
             },
             {
                 "rule_set":
@@ -160,24 +167,10 @@
             {
                 "rule_set":
                 [
-                    "geosite-cn"
-                ],
-                "outbound": "direct"
-            },
-            {
-                "rule_set":
-                [
+                    "geosite-cn",
                     "geoip-cn"
                 ],
                 "outbound": "direct"
-            },
-            {
-                "clash_mode": "Direct",
-                "outbound": "direct"
-            },
-            {
-                "clash_mode": "Global",
-                "outbound": "proxy"
             }
         ],
         "rule_set":
