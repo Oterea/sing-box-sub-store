@@ -50,6 +50,21 @@
             {
                 "rule_set": "geosite-geolocation-!cn",
                 "server": "dns-remote"
+            },
+            {
+                "type": "logical",
+                "mode": "and",
+                "rules": [
+                {
+                    "rule_set": "geosite-geolocation-!cn",
+                    "invert": true
+                  },
+                  {
+                    "rule_set": "geoip-cn"
+                  }
+                ],
+                "server": "dns-remote",
+                "client_subnet": "114.114.114.114/24"
             }
         ],
         "final": "dns-remote",
