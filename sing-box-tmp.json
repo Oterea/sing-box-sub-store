@@ -109,6 +109,10 @@
                 "outbound": "dns-out"
             },
             {
+                "port": [22, 3306, 3307],
+                "outbound": "direct"
+            },
+            {
                 "rule_set":
                 [
                     "geosite-openai"
