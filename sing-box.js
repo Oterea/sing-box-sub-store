@@ -29,6 +29,7 @@ function Policy(tag, type) {
   this.tag = tag;
   this.type = type;
   this.outbounds = [];
+  this.interrupt_exist_connections = true;
 }
 //===========================================
 let proxy = new Policy("proxy", "selector");
