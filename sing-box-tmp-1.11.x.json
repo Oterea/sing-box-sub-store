@@ -12,8 +12,8 @@
         "clash_api": {
             "external_controller": "127.0.0.1:9090",
             "external_ui": "xd",
-            "external_ui_download_url": "https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
-            "external_ui_download_detour": "proxy",
+            "external_ui_download_url": "https://ghgo.xyz/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
+            "external_ui_download_detour": "direct",
             "default_mode": "Rule"
         }
     },
@@ -108,7 +108,7 @@
             "type": "mixed",
             "listen": "127.0.0.1",
             "listen_port": 2080,
-            "sniff": true
+            "set_system_proxy": true
         }
     ],
     "route": {
@@ -116,20 +116,13 @@
         "final": "proxy",
         "rules": [
             {
-                "inbound": [
-                    "tun-in"
-                ],
                 "action": "sniff"
             },
             {
                 "protocol": "dns",
                 "action": "hijack-dns"
             },
-            {
-                "ip_is_private": true,
-                "action": "route",
-                "outbound": "direct"
-            },
+
             {
                 "clash_mode": "Direct",
                 "action": "route",
@@ -155,7 +148,9 @@
                         "protocol": "stun"
                     }
                 ],
-                "action": "reject"
+                "action": "reject",
+                "method": "default",
+                "no_drop": false
             },
             {
                 "port": [
@@ -168,10 +163,29 @@
             },
             {
                 "rule_set": [
+                    "geoip-private",
+                    "geosite-private"
+                ],
+                "action": "route",
+                "outbound": "direct"
+            },
+   
+            {
+                "rule_set": [
                     "geosite-openai"
                 ],
                 "action": "route",
                 "outbound": "openai"
+            },
+            {
+                "rule_set": [
+                    "geosite-youtube",
+                    "geoip-google",
+                    "geosite-google",
+                    "geosite-github"
+                ],
+                "action": "route",
+                "outbound": "proxy"
             },
             {
                 "rule_set": [
@@ -180,11 +194,6 @@
                 ],
                 "action": "route",
                 "outbound": "proxy"
-            },
-            {
-                "rule_set": "geosite-private",
-                "action": "route",
-                "outbound": "direct"
             },
             {
                 "rule_set": "geosite-geolocation-!cn",
@@ -202,31 +211,24 @@
         ],
         "rule_set": [
             {
-                "tag": "geoip-telegram",
+                "tag": "geosite-openai",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/telegram.srs",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs",
                 "download_detour": "direct"
             },
             {
-                "tag": "geosite-telegram",
+                "tag": "geosite-youtube",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/telegram.srs",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/youtube.srs",
                 "download_detour": "direct"
             },
             {
-                "tag": "geoip-cn",
+                "tag": "geosite-github",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cn.srs",
-                "download_detour": "direct"
-            },
-            {
-                "tag": "geosite-cn",
-                "type": "remote",
-                "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cn.srs",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs",
                 "download_detour": "direct"
             },
             {
@@ -237,6 +239,42 @@
                 "download_detour": "direct"
             },
             {
+                "tag": "geosite-category-ads-all",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-ads-all.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-telegram",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/telegram.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geoip-telegram",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/telegram.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geosite-google",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/google.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geoip-google",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/google.srs",
+                "download_detour": "direct"
+            },
+
+            {
                 "tag": "geosite-private",
                 "type": "remote",
                 "format": "binary",
@@ -244,17 +282,24 @@
                 "download_detour": "direct"
             },
             {
-                "tag": "geosite-openai",
+                "tag": "geoip-private",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/private.srs",
                 "download_detour": "direct"
             },
             {
-                "tag": "geosite-category-ads-all",
+                "tag": "geosite-cn",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-ads-all.srs",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cn.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geoip-cn",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cn.srs",
                 "download_detour": "direct"
             }
         ]
