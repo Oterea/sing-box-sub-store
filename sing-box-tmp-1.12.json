@@ -23,14 +23,12 @@
                 "tag": "dns-remote",
                 "type": "https",
                 "server": "1.1.1.1",
-                "strategy": "ipv4_only",
                 "detour": "proxy"
             },
             {
                 "tag": "dns-local",
                 "type": "https",
                 "server": "223.5.5.5",
-                "strategy": "ipv4_only",
                 "detour": "direct"
             }
         ],
