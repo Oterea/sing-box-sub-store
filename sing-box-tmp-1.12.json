@@ -28,8 +28,7 @@
             {
                 "tag": "dns-local",
                 "type": "https",
-                "server": "223.5.5.5",
-                "detour": "direct"
+                "server": "223.5.5.5"
             }
         ],
         "rules": [
