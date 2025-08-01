@@ -121,7 +121,15 @@
                 "protocol": "dns",
                 "action": "hijack-dns"
             },
-
+            {
+                "port": [
+                    22,
+                    3306,
+                    3307
+                ],
+                "action": "route",
+                "outbound": "direct"
+            },
             {
                 "clash_mode": "Direct",
                 "action": "route",
