@@ -152,6 +152,13 @@
                 "no_drop": false
             },
             {
+               "ip_cidr": [
+                    "3.0.0.0/8"
+                ], 
+                "action": "route",
+                "outbound": "proxy"
+            },   
+            {
                 "port": [
                     22,
                     3306,
