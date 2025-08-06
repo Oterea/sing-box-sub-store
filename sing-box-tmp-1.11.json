@@ -131,6 +131,13 @@
                 "outbound": "direct"
             },
             {
+                "domain_keyword": [
+                    "larksuite"
+                ],
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
                 "clash_mode": "Direct",
                 "action": "route",
                 "outbound": "direct"
@@ -159,7 +166,7 @@
                 "method": "default",
                 "no_drop": false
             },
-
+            
             {
                 "rule_set": [
                     "geoip-private",
