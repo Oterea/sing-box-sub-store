@@ -148,13 +148,7 @@
                 "method": "default",
                 "no_drop": false
             },
-            {
-                "domain_keyword": [
-                    "larksuite"
-                ],
-                "action": "route",
-                "outbound": "proxy"
-            },
+
             {
                 "port": [
                     22,
