@@ -81,6 +81,12 @@
     },
     "inbounds": [
         {
+          "tag": "dns-in",
+          "type": "direct",
+          "listen": "::",
+          "listen_port": 1053
+        },
+        {
           "tag": "redirect-in",
           "type": "redirect",
           "listen": "::",
@@ -114,10 +120,9 @@
                 "action": "sniff"
             },
             {
-                "protocol": "dns",
+                "inbound": "dns-in",
                 "action": "hijack-dns"
             },
-
             {
                 "clash_mode": "Direct",
                 "action": "route",
