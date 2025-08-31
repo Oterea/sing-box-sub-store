@@ -10,7 +10,7 @@
             "path": "/etc/momo/run/cache.db"
         },
         "clash_api": {
-            "external_controller": "127.0.0.1:9090",
+            "external_controller": "0.0.0.0:9696",
             "external_ui": "/etc/momo/run/ui",
             "external_ui_download_url": "https://github.oterea.top/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
             "external_ui_download_detour": "direct",
