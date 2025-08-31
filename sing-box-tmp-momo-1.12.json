@@ -7,13 +7,14 @@
     "experimental": {
         "cache_file": {
             "enabled": true,
-            "store_rdrc": true
+            "path": "/etc/momo/run/cache.db"
         },
         "clash_api": {
             "external_controller": "127.0.0.1:9090",
-            "external_ui": "xd",
+            "external_ui": "/etc/momo/run/ui",
             "external_ui_download_url": "https://github.oterea.top/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
             "external_ui_download_detour": "direct",
+            "secret": "",
             "default_mode": "Rule"
         }
     },
@@ -80,28 +81,26 @@
     },
     "inbounds": [
         {
-            "tag": "tun-in",
-            "type": "tun",
-            "stack": "system",
-            "address": [
-                "172.19.0.1/30"
-            ],
-            "mtu": 9000,
-            "auto_route": true,
-            "strict_route": false,
-            "platform": {
-                "http_proxy": {
-                    "enabled": true,
-                    "server": "127.0.0.1",
-                    "server_port": 2080
-                }
-            }
+          "tag": "redirect-in",
+          "type": "redirect",
+          "listen": "::",
+          "listen_port": 7890
         },
         {
-            "tag": "mixed-in",
-            "type": "mixed",
-            "listen": "127.0.0.1",
-            "listen_port": 2080
+          "tag": "tproxy-in",
+          "type": "tproxy",
+          "listen": "::",
+          "listen_port": 7891
+        },
+        {
+          "tag": "tun-in",
+          "type": "tun",
+          "interface_name": "momo",
+          "address": [
+            "172.31.0.1/30",
+          ],
+          "auto_route": false,
+          "auto_redirect": false
         }
     ],
     "route": {
