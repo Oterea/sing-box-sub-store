@@ -166,7 +166,7 @@ config.outbounds.forEach((outbound) => {
 
 
 
-config.outbounds.push(proxyPolicies, ...autoPolicies, ...manualPolicies, aiPolicies, ...countryPolicies, ...proxyNodes);
+config.outbounds.push(proxyPolicies, aiPolicies, ...autoPolicies, ...manualPolicies,  ...countryPolicies, ...proxyNodes);
 
 /**
  * 输出配置
