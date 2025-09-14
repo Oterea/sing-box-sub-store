@@ -1,5 +1,6 @@
 // ===========================================
 // 参数与初始化
+// 支持组合订阅，订阅中包含多个机场的节点
 // 节点名称格式：🇸🇬 airportName Singapore 01 ---------- originProxyNodes 、 proxyNodes
 // ===========================================
 
@@ -67,7 +68,7 @@ let proxyPolicies = new Policy("proxy", "selector"); // 用户手动选择代理
 
 let autoPolicies = Array.from(airports, (airport) => {
   // 拼接策略组名字，比如加上 "Auto-"
-  let policyName = `Auto-${airport}`;
+  let policyName = `${airport} AUTO`;
 
   let policy = new Policy(policyName, "urltest");
 
@@ -85,7 +86,7 @@ let autoPolicies = Array.from(airports, (airport) => {
 
 let manualPolicies = Array.from(airports, (airport) => {
   // 拼接策略组名字，比如加上 "Manual-"
-  let policyName = `Manual-${airport}`;
+  let policyName = `${airport} MANUAL`;
   let policy = new Policy(policyName, "selector");
 
   // 遍历 countries，找到和机场匹配的策略组
@@ -101,7 +102,7 @@ let manualPolicies = Array.from(airports, (airport) => {
 });
 
 // openai 分组，专门收集非香港的节点
-let aiPolicies = new Policy("ai", "selector");
+let aiPolicies = new Policy("AI", "selector");
 
 
 // ===========================================
