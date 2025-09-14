@@ -1,5 +1,6 @@
 // ===========================================
 // 参数与初始化
+// 节点名称格式：🇸🇬 airportName Singapore 01 ---------- originProxyNodes 、 proxyNodes
 // ===========================================
 
 // 从外部参数中解构获取 type 和 name
@@ -16,6 +17,8 @@ const compatible_outbound = {
 
 let compatible; // 标记是否已添加 compatible_outbound
 let config = JSON.parse($files[0]); // 读取初始配置文件
+
+
 
 // 生成原始代理节点列表
 let originProxyNodes = await produceArtifact({
@@ -69,11 +72,13 @@ let autoPolicies = Array.from(airports, (airport) => {
   let policy = new Policy(policyName, "urltest");
 
   // 遍历 countries，找到和机场匹配的策略组
-  countries.forEach((country) => {
-    if (country.includes(airport)) {
-      policy.outbounds.push(country);
-    }
-  });
+  policy.outbounds.push(
+    ...Array.from(countries).filter((countryName) => {
+      let parts = countryName.split(" ");
+      let countryAirport = parts[1]; // 第二个部分是机场名
+      return countryAirport === airport;
+    })
+  );
 
   return policy;
 });
@@ -84,11 +89,13 @@ let manualPolicies = Array.from(airports, (airport) => {
   let policy = new Policy(policyName, "selector");
 
   // 遍历 countries，找到和机场匹配的策略组
-  countries.forEach((country) => {
-    if (country.includes(airport)) {
-      policy.outbounds.push(country);
-    }
-  });
+  policy.outbounds.push(
+    ...Array.from(countries).filter((countryName) => {
+      let parts = countryName.split(" ");
+      let countryAirport = parts[1]; // 第二个部分是机场名
+      return countryAirport === airport;
+    })
+  );
 
   return policy;
 });
