@@ -173,7 +173,7 @@
    
             {
                 "rule_set": [
-                    "geosite-openai"
+                    "geosite-category-ai-!cn"
                 ],
                 "action": "route",
                 "outbound": "AI"
@@ -212,10 +212,10 @@
         ],
         "rule_set": [
             {
-                "tag": "geosite-openai",
+                "tag": "geosite-category-ai-!cn",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/openai.srs",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-ai-!cn.srs",
                 "download_detour": "direct"
             },
             {
