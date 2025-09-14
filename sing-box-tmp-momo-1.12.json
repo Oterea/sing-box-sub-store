@@ -176,7 +176,7 @@
                     "geosite-openai"
                 ],
                 "action": "route",
-                "outbound": "openai"
+                "outbound": "AI"
             },
             {
                 "rule_set": [
