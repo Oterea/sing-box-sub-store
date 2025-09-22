@@ -154,10 +154,16 @@
             },
             {
                 "port": [
+                    5432
+                ],
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
+                "port": [
                     22,
                     3306,
-                    3307,
-                    5432
+                    3307
                 ],
                 "action": "route",
                 "outbound": "direct"
