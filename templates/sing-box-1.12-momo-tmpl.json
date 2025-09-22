@@ -156,7 +156,8 @@
                 "port": [
                     22,
                     3306,
-                    3307
+                    3307,
+                    5432
                 ],
                 "action": "route",
                 "outbound": "direct"
