@@ -152,7 +152,14 @@
                 "method": "default",
                 "no_drop": false
             },
-
+            {
+                "ip_cidr": [
+                    "3.15.5.78"
+                
+                ],
+                "action": "route",
+                "outbound": "proxy"
+            },
             {
                 "port": [
                     22,
