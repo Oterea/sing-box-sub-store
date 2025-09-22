@@ -158,7 +158,7 @@
                 
                 ],
                 "action": "route",
-                "outbound": "proxy"
+                "outbound": "direct"
             },
             {
                 "port": [
