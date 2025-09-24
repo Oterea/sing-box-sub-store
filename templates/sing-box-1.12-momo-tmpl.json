@@ -161,6 +161,13 @@
             },
             {
                 "port": [
+                    3306
+                ],
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
+                "port": [
                     22,
                     3306,
                     3307
