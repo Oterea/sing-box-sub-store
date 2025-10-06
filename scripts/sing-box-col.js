@@ -35,7 +35,7 @@ let originProxyNodes = await produceArtifact({
 
 // 提取并去除带有流量信息（如 "GB"）的节点
 let nodeInfoTag = extractProxyTagsMatching(originProxyNodes, /GB/i)[0];
-let proxyNodes = filterOutProxiesByRegex(originProxyNodes, /GB/i);
+// let proxyNodes = filterOutProxiesByRegex(originProxyNodes, /GB/i);
 let proxyNodes = originProxyNodes;
 // 通过节点 tag 提取国家/地区名集合（去掉节点编号部分）
 // 例如: 🇸🇬 Singapore 01 → 🇸🇬 Singapore
