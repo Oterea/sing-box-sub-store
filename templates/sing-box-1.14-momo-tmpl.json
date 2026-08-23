@@ -1,0 +1,257 @@
+{
+    "log": {
+        "disabled": false,
+        "level": "warn",
+        "timestamp": true
+    },
+    "experimental": {
+        "cache_file": {
+            "enabled": true,
+            "store_dns": true
+        },
+        "clash_api": {
+            "external_controller": "0.0.0.0:9695",
+            "default_mode": "Rule"
+        }
+    },
+    "services": [
+        {
+            "type": "api",
+            "listen": "0.0.0.0",
+            "listen_port": 9696,
+            "secret": "singbox",
+            "dashboard": {
+                "enabled": true,
+                "path": "zashboard",
+                "download_url": "https://gh-proxy.com/https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip",
+                "http_client": "default",
+                "update_interval": "1d"
+            }
+        },
+        {
+            "type": "api",
+            "listen": "0.0.0.0",
+            "listen_port": 9697,
+            "secret": "singbox",
+            "dashboard": {
+                "enabled": true,
+                "path": "dashboard",
+                "download_url": "https://gh-proxy.com/https://github.com/SagerNet/sing-box-dashboard/archive/refs/heads/gh-pages.zip",
+                "http_client": "default",
+                "update_interval": "1d"
+            }
+        }
+    ],
+    "http_clients": [
+        {
+            "tag": "default"
+        }
+    ],
+    "dns": {
+        "servers": [
+            {
+                "tag": "dns-remote",
+                "type": "https",
+                "server": "1.1.1.1",
+                "detour": "proxy"
+            },
+            {
+                "tag": "dns-local",
+                "type": "https",
+                "server": "223.5.5.5"
+            }
+        ],
+        "rules": [
+            {
+                "clash_mode": "Direct",
+                "action": "route",
+                "server": "dns-local"
+            },
+            {
+                "clash_mode": "Global",
+                "action": "route",
+                "server": "dns-remote"
+            },
+            {
+                "rule_set": "geosite/category-ads-all",
+                "action": "predefined"
+            },
+            {
+                "query_type": "HTTPS",
+                "action": "predefined"
+            },
+            {
+                "rule_set": "geosite/cn",
+                "action": "route",
+                "server": "dns-local"
+            },
+            {
+                "rule_set": "geosite/geolocation-!cn",
+                "action": "route",
+                "server": "dns-remote"
+            }
+        ],
+        "final": "dns-remote",
+        "optimistic": true,
+        "strategy": "ipv4_only"
+    },
+    "inbounds": [
+        {
+            "tag": "dns-in",
+            "type": "direct",
+            "listen": "::",
+            "listen_port": 1053
+        },
+        {
+            "tag": "redirect-in",
+            "type": "redirect",
+            "listen": "::",
+            "listen_port": 7890
+        },
+        {
+            "tag": "tproxy-in",
+            "type": "tproxy",
+            "listen": "::",
+            "listen_port": 7891
+        },
+        {
+            "tag": "tun-in",
+            "type": "tun",
+            "interface_name": "momo",
+            "address": [
+                "172.31.0.1/30"
+            ],
+            "auto_route": false,
+            "auto_redirect": false
+        }
+    ],
+    "route": {
+        "default_domain_resolver": {
+            "server": "dns-local"
+        },
+        "default_http_client": "default",
+        "auto_detect_interface": true,
+        "final": "proxy",
+        "rules": [
+            {
+                "action": "sniff"
+            },
+            {
+                "inbound": "dns-in",
+                "action": "hijack-dns"
+            },
+            {
+                "clash_mode": "Direct",
+                "action": "route",
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "Global",
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
+                "type": "logical",
+                "mode": "or",
+                "rules": [
+                    {
+                        "port": 853
+                    },
+                    {
+                        "network": "udp",
+                        "port": 443
+                    },
+                    {
+                        "protocol": "stun"
+                    }
+                ],
+                "action": "reject",
+                "method": "default",
+                "no_drop": true
+            },
+            {
+                "port": [
+                    22,
+                    3306,
+                    3307
+                ],
+                "action": "route",
+                "outbound": "direct"
+            },
+            {
+                "rule_set": [
+                    "geoip/private",
+                    "geosite/private"
+                ],
+                "action": "route",
+                "outbound": "direct"
+            },
+            {
+                "rule_set": [
+                    "geosite/category-ai-!cn"
+                ],
+                "action": "route",
+                "outbound": "AI"
+            },
+            {
+                "rule_set": [
+                    "geosite/youtube",
+                    "geoip/google",
+                    "geosite/google",
+                    "geosite/github"
+                ],
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
+                "rule_set": [
+                    "geoip/telegram",
+                    "geosite/telegram"
+                ],
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
+                "rule_set": "geosite/geolocation-!cn",
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
+                "rule_set": [
+                    "geosite/cn",
+                    "geoip/cn"
+                ],
+                "action": "route",
+                "outbound": "direct"
+            }
+        ],
+        "rule_set": [
+            {
+                "type": "remote",
+                "format": "binary",
+                "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/{tag}.srs",
+                "tag": [
+                    "geosite/category-ads-all",
+                    "geosite/category-ai-!cn",
+                    "geosite/cn",
+                    "geosite/geolocation-!cn",
+                    "geosite/github",
+                    "geosite/google",
+                    "geosite/private",
+                    "geosite/telegram",
+                    "geosite/youtube",
+                    "geoip/cn",
+                    "geoip/google",
+                    "geoip/private",
+                    "geoip/telegram"
+                ]
+            }
+        ]
+    },
+    "outbounds": [
+        {
+            "type": "direct",
+            "tag": "direct"
+        }
+    ]
+}
