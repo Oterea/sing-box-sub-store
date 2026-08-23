@@ -1,0 +1,428 @@
+{
+  // ══════════════════════════════════════════════════════════════
+  //  这是 a-1.14.json 的教学副本
+  //  outbounds 换成了占位节点，其余原样。重点看 dns.rules 的注释。
+  //
+  //  【核心概念】每条规则 = 「如果…就…」
+  //      如果 = 条件字段（rule_set / clash_mode / match_response …），可以没有
+  //      就   = action，每条都有（不写默认是 route）
+  // ══════════════════════════════════════════════════════════════
+
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "store_dns": true
+    },
+
+    // clash_api = Clash 兼容的 REST API
+    //   external_controller  监听地址。SFM 界面靠它读状态（是否已启动、
+    //                        节点分组、连接列表），zashboard 也连它。
+    //                        文档：留空则整个 Clash API 关闭。
+    //   default_mode         文档原话「本身没有直接作用」，只是给配置里
+    //                        那些 clash_mode 规则提供初始值。
+    //
+    // 这里【没有】external_ui 三件套 —— 见下面 services 处的说明。
+    "clash_api": {
+      "external_controller": "0.0.0.0:9695",
+      "default_mode": "Rule"
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  services —— 配置的第三类顶层组件
+  //     inbounds  流量从哪进来
+  //     outbounds 流量从哪出去
+  //     services  跟代理无关、但要跑起来的后台服务
+  //
+  //  这里开了【两个】api 服务，各托管一个网页面板：
+  //     9696  zashboard
+  //     9697  官方 sing-box dashboard
+  //
+  //  ⚠️ 为什么不用 clash_api 的 external_ui 托管面板（那样只要一个端口）：
+  //
+  //     clash_api 那段下载代码有 bug（v1.14.0-beta.17 实测）：
+  //       · server.go:173       先【同步】下载完外部 UI，才 net.Listen 开端口
+  //       · server_resources.go:57  httpClient 只设了 TLSHandshakeTimeout，
+  //                             没有整体超时
+  //       · 实测：24KB 文件 4 秒下完；6~9MB 的面板永远下不完
+  //     后果：clash_api 端口一直不监听 → SFM 界面显示「未启动」、没有
+  //     「组」标签，但隧道其实在正常跑（能上网）。这个坑没人报过。
+  //
+  //     services 的 api 走 1.14 新的 http_client 机制：先开端口、后台
+  //     下载，下载慢不影响启动。所以面板改挂这里。
+  //
+  //  注意这是两套【不同协议】：
+  //     clash_api     Clash REST API  ← zashboard 说这个
+  //     services api  gRPC            ← 官方 dashboard 说这个
+  //  把 zashboard 挂在 api 服务上只是借它当静态文件服务器；zashboard
+  //  加载后仍要自己去连 clash_api（9695）。可用 URL 参数预设后端：
+  //     http://<ip>:9696/dashboard/#/setup?hostname=<ip>&port=9695
+  //
+  //  ⚠️ listen 是 0.0.0.0 且 clash_api 没设 secret ——
+  //     同网段任何设备都能切你的节点、看连接记录。
+  //     文档原话：ALWAYS set a secret if RESTful API is listening on 0.0.0.0
+  // ══════════════════════════════════════════════════════════════
+  "services": [
+    {
+      "type": "api",
+      "listen": "0.0.0.0",
+      "listen_port": 9696,
+      "secret": "singbox",
+      "dashboard": {
+        "enabled": true,
+        "path": "zashboard",
+        "download_url": "https://gh-proxy.com/https://github.com/Zephyruso/zashboard/archive/refs/heads/gh-pages.zip",
+        "http_client": "default",
+        "update_interval": "1d"
+      }
+    },
+    {
+      "type": "api",
+      "listen": "0.0.0.0",
+      "listen_port": 9697,
+      "secret": "singbox",
+      "dashboard": {
+        "enabled": true,
+        "path": "dashboard",
+        "download_url": "https://gh-proxy.com/https://github.com/SagerNet/sing-box-dashboard/archive/refs/heads/gh-pages.zip",
+        "http_client": "default",
+        "update_interval": "1d"
+      }
+    }
+  ],
+
+  "http_clients": [
+    // 所有字段省略，只留名字。展开后等于：
+    //   engine=go, version=2(HTTP/2), 无 TLS 覆盖, 【无 detour】
+    //   domain_resolver 继承 route.default_domain_resolver
+    //
+    // 起作用的不是内容，是【它存在】—— http_clients 非空时，
+    // 规则集下载的默认路径从「走默认出站(proxy)」翻成「直连」。
+    //
+    // 叫 default 是因为它的角色就是默认客户端：route.default_http_client
+    // 指向它，任何不指定 http_client 的组件（规则集、面板下载…）都用它。
+    { "tag": "default" }
+  ],
+
+  "dns": {
+    "servers": [
+      { "tag": "dns-remote", "type": "https", "server": "1.1.1.1",   "detour": "proxy" },
+      { "tag": "dns-local",  "type": "https", "server": "223.5.5.5" }
+    ],
+
+    // ────────────────────────────────────────────────────────────
+    //  从上往下逐条试。命中哪条就执行哪条的 action，然后结束。
+    //  唯一的例外是 evaluate —— 它执行完不结束，继续往下。
+    //
+    //  DNS 里能用的 5 种 action：
+    //    route       就交给某台 DNS 去查        → 结束
+    //    reject      就直接回「查不到」，不查    → 结束
+    //    evaluate    就先查一下存着            → 不结束，继续往下
+    //    respond     就把存着的答案还回去       → 结束
+    //    predefined  就返回写死的答案           → 结束
+    // ────────────────────────────────────────────────────────────
+    "rules": [
+
+      // ① 如果 SFM 里模式切成「直连」→ 就交给国内 DNS 查
+      {
+        "clash_mode": "Direct",          // 如果
+        "action": "route",               // 就
+        "server": "dns-local"            //   交给这台
+      },
+
+      // ② 如果模式切成「全局」→ 就交给国外 DNS 查
+      {
+        "clash_mode": "Global",
+        "action": "route",
+        "server": "dns-remote"
+      },
+
+      // ③ 如果域名在广告名单里 → 就直接编一个「没有地址」的响应还回去
+      //
+      //    predefined = 不问任何 DNS 服务器，直接返回写死的响应。
+      //    什么字段都不填时返回 NOERROR + 空 answer，
+      //    意思是「这域名存在，但它没有 IP」。
+      //
+      //    为什么不用 reject：reject 返回的是 REFUSED（「我拒绝回答」），
+      //    应用会当成这台 DNS 出故障，可能转头去问系统里配的其他 DNS，
+      //    从而绕过拦截。predefined 给的是肯定的否定答案，应用直接放弃。
+      //
+      //    还能自定义：  "rcode": "NXDOMAIN"
+      //                 "answer": ["blocked. IN A 0.0.0.0"]
+      {
+        "rule_set": "geosite/category-ads-all",
+        "action": "predefined"
+      },
+
+      // 屏蔽 HTTPS / SVCB 类型的 DNS 记录
+      //
+      //   这里的 HTTPS 不是「网址的 https」，是一种【DNS 记录类型】，
+      //   里面装的是连接参数：alpn=h3（支不支持 HTTP/3）、ECH 配置等。
+      //
+      //   为什么屏蔽：
+      //     · 下面 route 规则里已经把 QUIC（udp 443）掐了，
+      //       浏览器却会从这条记录得知「有 HTTP/3」→ 发 QUIC → 被掐 → 回落，
+      //       白跑一趟。屏蔽掉它就不会去试。
+      //     · ECH 会把 TLS 握手里的真实域名加密，导致嗅探不到域名，
+      //       而本配置的路由规则大量依赖嗅探出的域名。
+      //
+      //   用 predefined 而不是 reject：返回 NOERROR+空（「这域名没有
+      //   HTTPS 记录」）是个每天都会遇到的正常答案，客户端安静地继续
+      //   用 A 记录；REFUSED 则是异常信号，可能触发换 DNS 重试。
+      {
+        "query_type": "HTTPS",
+        "action": "predefined"
+      },
+
+      // ④ 如果域名在国内网站名单里 → 就交给国内 DNS
+      {
+        "rule_set": "geosite/cn",
+        "action": "route",
+        "server": "dns-local"
+      },
+
+      // ⑤ 如果域名在国外网站名单里 → 就交给国外 DNS
+      //
+      //    （原先这里有「本条不能动」的警告 —— 现在 ⑥ 自己带了
+      //      invert 护栏，不再依赖本条，警告解除。）
+      //
+      //       原因：⑦ 原本还有一个子条件
+      //         { "rule_set": "geosite/geolocation-!cn", "invert": true }
+      //       意思是「不在国外名单里」。但因为本条会把国外域名全部
+      //       送走并终止匹配，能走到 ⑦ 的必然已经不在这个名单里，
+      //       该子条件恒为真，所以迁移时把它删掉了。
+      //
+      //       如果把本条删除 / 挪到 ⑦ 后面 / 改成不终止的 action，
+      //       ⑦ 就会对国外域名误命中 —— 而且不会报任何错。
+      {
+        "rule_set": "geosite/geolocation-!cn",
+        "action": "route",
+        "server": "dns-remote"
+      }
+
+      // 【已删除的第 ⑥⑦ 条】原先这里有两条规则做「IP 反推」：
+      //      evaluate 先查一次 → match_response 比对 geoip/cn
+      //      → 是中国 IP 就当国内站
+      //
+      //    删掉的理由：它不改变任何结果。
+      //    route.rules 最后一条 { "rule_set": ["geosite/cn","geoip/cn"] }
+      //    已经在【路由层】按解析出的 IP 判断了 —— 陌生域名不管用哪台
+      //    DNS 解析，最终都由那条决定走 direct 还是 proxy。
+      //    在 DNS 层再判一遍是重复劳动。
+      //
+      //    实测佐证：32 个候选域名无一触发；能受益的域名（Apple、
+      //    Microsoft 的国内 CDN）都在 geolocation-!cn 名单里，
+      //    第 ⑤ 条就被送走了，根本到不了这里。
+      //
+      //    而它带来的代价是实的：探路查询会把陌生域名暴露给探路用的
+      //    那台 DNS（用 dns-local 时泄露给阿里，实测在 DNS 泄露检测
+      //    网站上能看到阿里的递归解析器）。
+      //
+      //    参考配置也是同样思路：DNS 层只按域名分流，IP 反推交给路由层。
+    ],
+
+    // 以上 6 条都没命中 → 兜底，交给国外 DNS
+    "final": "dns-remote",
+
+    // 乐观缓存：DNS 答案过期后不扔掉，先把旧答案给你（0ms），
+    // 同时后台悄悄查一次把缓存更新掉。
+    //
+    // 好处：常用网站永远不用等 DNS。对这份配置尤其明显 ——
+    //       dns-remote 要绕代理出国，一次查询一两百毫秒，
+    //       而 TTL 常常只有一两分钟，等于反复在付这个钱。
+    //       配合上面的 store_dns，重启后过期缓存照样先用，
+    //       刚启动那几分钟不会一卡一卡。
+    //
+    // 代价：网站真换了 IP 时会用一次旧的，之后后台刷新完就恢复。
+    //
+    // 想给个别域名关掉，在那条规则上加 "disable_optimistic_cache": true
+    "optimistic": true,
+
+    "strategy": "ipv4_only"
+  },
+
+  "inbounds": [
+    {
+      "tag": "tun-in",
+      "type": "tun",
+      "stack": "system",
+      "address": ["172.19.0.1/30"],
+
+      // 【不设 mtu】让内核按平台自己选：
+      //   Network Extension (SFM/SFI) → 4064
+      //   Android                     → 9000
+      //   命令行 / 桌面                → 65535
+      //
+      // 源码注释原文：在 Network Extension 里 MTU 超过 4064 时
+      // "the performance of tun will drop significantly"。
+      // 原先这里写的 9000 是【安卓的默认值】，抄到 macOS 上
+      // 正好绕过了内核的这个保护。
+
+      "auto_route": true,
+      "strict_route": false,
+      "platform": {
+        "http_proxy": { "enabled": true, "server": "127.0.0.1", "server_port": 2080 }
+      }
+    },
+    {
+      "tag": "mixed-in",
+      "type": "mixed",
+      "listen": "127.0.0.1",
+      "listen_port": 2080
+    }
+  ],
+
+  "route": {
+    "default_domain_resolver": { "server": "dns-local" },
+    "default_http_client": "default",
+    "auto_detect_interface": true,
+    "final": "proxy",
+
+    // ────────────────────────────────────────────────────────────
+    //  route.rules 和 dns.rules 是【两套独立的规则】
+    //    dns.rules   决定「域名交给哪台 DNS 查」
+    //    route.rules 决定「连接从哪个出口走」
+    //
+    //  route 里的 action 和 dns 里的不是同一套：
+    //    route         就交给某个出站        → 结束
+    //    reject        就掐断这个连接        → 结束
+    //    sniff         就嗅探这是什么协议     → 不结束，继续往下
+    //    hijack-dns    就把 DNS 请求截下来自己处理
+    //    resolve       就把域名解析成 IP      → 不结束
+    //    route-options 就只设选项不选出口      → 不结束
+    // ────────────────────────────────────────────────────────────
+    "rules": [
+
+      // 没有「如果」→ 所有连接都嗅探一下，看是 HTTP 还是 TLS 还是别的
+      // sniff 不结束，继续往下匹配
+      { "action": "sniff" },
+
+      // 如果是 DNS 请求 → 就截下来交给上面的 dns 模块处理
+      //
+      //   两个条件并联（mode: "or"，任一满足即可），各自补对方的盲区：
+      //     port 53      抓「嗅探没认出来的」—— 畸形包、不认识的查询类型
+      //     protocol dns 抓「不在 53 端口上的」—— 有些软件用 5353 / 1053
+      //
+      //   protocol 依赖上一条 sniff 的结果（文档原文是 "Sniffed protocol"），
+      //   所以 sniff 必须排在它前面。
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          { "port": 53 },
+          { "protocol": "dns" }
+        ],
+        "action": "hijack-dns"
+      },
+
+      // 如果模式切成「直连」→ 就走直连出口
+      { "clash_mode": "Direct", "action": "route", "outbound": "direct" },
+
+      // 如果模式切成「全局」→ 就走代理出口
+      { "clash_mode": "Global", "action": "route", "outbound": "proxy" },
+
+      // 如果满足以下【任意一条】→ 就掐断
+      //   logical + mode:or = 「或」，子条件命中一个就算命中
+      { 
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          { "port": 853 },                    // DoT 端口
+          { "network": "udp", "port": 443 },  // QUIC / HTTP3
+          { "protocol": "stun" }              // STUN（P2P 打洞）
+        ],
+        "action": "reject",
+        "method": "default",
+
+        //  no_drop: true —— 文档：不启用时，30 秒内触发超过 50 次，
+        //  method 会被【临时改成 drop】（静默丢弃）。
+        //
+        //  那会出问题：浏览器在地址栏打字搜索时，每敲一个字就发一次
+        //  搜索建议请求，几秒就把 50 次配额烧光 → 规则转为静默丢弃
+        //  → 浏览器收不到「端口不可达」，只能干等 QUIC 握手超时才
+        //  回落 TCP → 表现为搜索一直转圈，过 30 秒窗口重置后又好了。
+        //
+        //  设为 true 后永远快速拒绝，代价是持续回 ICMP 的开销（可忽略）。
+        "no_drop": true
+      },
+
+      // 如果目标端口是 22 / 3306 / 3307 → 就走直连（SSH 和数据库不走代理）
+      { "port": [22, 3306, 3307], "action": "route", "outbound": "direct" },
+
+      // 如果是内网地址 → 就走直连
+      { "rule_set": ["geoip/private", "geosite/private"], "action": "route", "outbound": "direct" },
+
+      // 如果是 AI 站点 → 就走 AI 这个分组
+      { "rule_set": ["geosite/category-ai-!cn"], "action": "route", "outbound": "AI" },
+
+      // 如果是 YouTube / Google / GitHub → 就走代理
+      { "rule_set": ["geosite/youtube", "geoip/google", "geosite/google", "geosite/github"], "action": "route", "outbound": "proxy" },
+
+      // 如果是 Telegram → 就走代理
+      { "rule_set": ["geoip/telegram", "geosite/telegram"], "action": "route", "outbound": "proxy" },
+
+      // 如果在国外网站名单里 → 就走代理
+      { "rule_set": "geosite/geolocation-!cn", "action": "route", "outbound": "proxy" },
+
+      // 如果在国内名单里 → 就走直连
+      { "rule_set": ["geosite/cn", "geoip/cn"], "action": "route", "outbound": "direct" }
+
+      // 以上都没命中 → 用下面的 "final": "proxy" 兜底，走代理
+    ],
+
+    // ── 规则集：上面 rule_set 引用的名单文件，启动时从网上下载 ──
+    //
+    //  1.14 起 tag 可以是数组，url 里的 {tag} 会被每个 tag 逐个替换，
+    //  展开成多个独立的规则集。所以原来 13 条声明压成了 1 条。
+    //
+    //  注意 tag 里的 "geosite/" "geoip/" 前缀，它一举两得：
+    //    ① 它同时是 URL 路径的一部分 —— {tag} 替换后正好拼出
+    //       .../geo/geosite/cn.srs
+    //    ② tag 在全局必须唯一，而 geosite 和 geoip 下有 4 组同名文件
+    //       （cn / google / telegram / private），靠前缀区分开
+    //
+    //  所以前缀【不能】挪到 url 里去写成两条 —— 那样展开后会出现两个
+    //  都叫 "cn" 的规则集，启动直接报 duplicate rule-set tag。
+    //
+    //  引用时用带斜杠的全名 "geosite/cn"，不是旧的 "geosite/cn"
+    "rule_set": [
+      {
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/{tag}.srs",
+        "tag": [
+          "geosite/category-ads-all", "geosite/category-ai-!cn", "geosite/cn",
+          "geosite/geolocation-!cn",  "geosite/github",          "geosite/google",
+          "geosite/private",          "geosite/telegram",        "geosite/youtube",
+          "geoip/cn",                 "geoip/google",            "geoip/private",
+          "geoip/telegram"
+        ]
+      }
+    ]
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  以下是占位节点，替换了原来的 409 个真实节点
+  //  只保留了被上面规则引用到的三个 tag：direct / proxy / AI
+  // ══════════════════════════════════════════════════════════════
+  "outbounds": [
+    { "type": "direct", "tag": "direct" },
+
+    { 
+      "type": "vless",
+      "tag": "节点A",
+      "server": "example.com",
+      "server_port": 443,
+      "uuid": "00000000-0000-0000-0000-000000000000",
+      "tls": { "enabled": true }
+    },
+
+    { "type": "selector", "tag": "proxy", "outbounds": ["节点A"] },
+    { "type": "selector", "tag": "AI",    "outbounds": ["节点A"] }
+  ]
+}
