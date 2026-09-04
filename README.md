@@ -24,17 +24,17 @@ Sub-Store 本身怎么搭建不在这里讲，[参考教程](https://www.youtube
       ▼
    订阅「naixi」
       ┊
-      ┊  ← sing-box-col.js 用 produceArtifact({ name: "naixi" }) 主动来取
+      ┊  ← sing-box-col.js 按订阅名「naixi」主动来取
       ┊
       ▼
    【文件】
-      ├─ templates/ 里的模板  → 脚本的 $files[0]
-      └─ sing-box-col.js      → 把节点装进模板的 outbounds
+      ├─ templates/ 里的模板
+      └─ sing-box-col.js  → 把节点装进模板的 outbounds
       ▼
    最终 config.json          ← 你的 sing-box 订阅这个地址
 ```
 
-**分工**：`rename.js` 负责"认识地理"（它内部有 4 张 180+ 条的地区对照表，把 `深港`/`HK`/`香港`/`Hong Kong` 全部归一）；`sing-box-col.js` 不认识地理，它只按字符串分堆。所以两个脚本是绑死的，换掉 rename，col 就不会分组了。
+**分工**：`rename.js` 负责认识地理，把各家机场五花八门的写法（`深港`、`HK`、`香港`、`Hong Kong`）统一成一种；`sing-box-col.js` 不认识地理，它只是按名字把节点分堆。所以两者是绑死的 —— 名字没规整好，分组就是乱的。
 
 ## 第一步：配置订阅
 
@@ -173,4 +173,4 @@ AI (selector)                             ← 平铺，直接是节点
 | 每个 `rule_set` 各写一个 `download_detour` | 顶层声明 `http_clients`，`rule_set` 的 `tag` 改成数组 + URL 里用 `{tag}` 占位 |
 | 不声明 `http_clients`（规则集默认走默认出站） | 显式声明 `http_clients` + `route.default_http_client` |
 
-另外 1.14 的 `clash_api` 在下载 external UI 时是**同步**下载完才开始监听端口（`experimental/clashapi/server.go`），面板文件有几 MB 时会一直下不完，表现为 API 端口始终不监听、客户端显示"未启动"，但隧道其实是通的。模板改用 `services` 里的 api 服务托管面板绕开这个问题 —— 它先开端口、后台下载。
+另外 1.14 用 `clash_api` 的 `external_ui` 托管面板有个坑：它要把面板文件**下载完**才开始监听端口。面板动辄几 MB，网络不好就一直下不完，表现为 API 端口始终不通、客户端显示"未启动"，但隧道其实是正常的。模板改用 `services` 里的 api 服务托管面板绕开它 —— 那条路是先开端口、再后台下载。
