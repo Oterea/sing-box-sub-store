@@ -33,22 +33,20 @@ let originProxyNodes = await produceArtifact({
 // 预处理节点
 // ===========================================
 
-// 提取并去除带有流量信息（如 "GB"）的节点
-let nodeInfoTag = extractProxyTagsMatching(originProxyNodes, /GB/i)[0];
-// let proxyNodes = filterOutProxiesByRegex(originProxyNodes, /GB/i);
 let proxyNodes = originProxyNodes;
 // 通过节点 tag 提取国家/地区名集合（去掉节点编号部分）
 // 例如: 🇸🇬 Singapore 01 → 🇸🇬 Singapore
 let countries = new Set();
-proxyNodes.map((obj) => {
-  countries.add(obj.tag.split(" ").slice(0, -1).join(" "));
+proxyNodes.forEach((obj) => {
+  // 去掉末尾编号得到地区名。节点名里没有空格时切出来是空串（rename.js 的 nm
+  // 参数会原样保留没匹配上的节点，这类名字可能就没有空格）—— 空串会造出一个
+  // tag 为 "" 的策略组，而 new RegExp("") 匹配一切，等于把所有节点又收一遍
+  const country = obj.tag.split(" ").slice(0, -1).join(" ");
+  if (country) countries.add(country);
 });
 
 // 获取所有机场名字
 let airports = extractAirportNames(proxyNodes);
-
-// 定义预设的策略组标签 nouse
-policyTagList = ["🍀 all", "🛍️ proxy", "🍬 direct", "🧬 auto", "🇨🇳 Taiwan"];
 
 // ===========================================
 // 策略组构造函数
@@ -141,14 +139,26 @@ let countryPolicies = Array.from(countries, (countryName) => {
   let countryPolicy = new Policy(countryName, "urltest");
 
   // 将匹配该国家名的所有节点 tag 添加到策略组的 outbounds
-  let regex = new RegExp(countryName, "i");
+  let regex = new RegExp(escapeRegExp(countryName), "i");
   countryPolicy.outbounds.push(...extractProxyTagsMatching(proxyNodes, regex));
 
   return countryPolicy;
 });
 
 /**
- * 兜底处理：如果某个分组没有子节点，则加入 COMPATIBLE
+ * 添加策略组到配置
+ */
+config.outbounds.push(proxyPolicies, aiPolicies, ...autoPolicies, ...manualPolicies, ...countryPolicies, ...proxyNodes);
+
+/**
+ * 兜底处理：空策略组补一个 COMPATIBLE(direct)
+ *
+ * 必须放在 push 之后。放在前面时 config.outbounds 里只有模板自带的 direct，
+ * 而 direct 根本没有 outbounds 字段 —— 要保护的那些组还没建出来，这段等于没跑。
+ *
+ * 空的 selector / urltest 会让 sing-box 直接拒绝启动（missing tags）。触发场景
+ * 是实打实的：订阅拉到 0 个节点（机场跑路、续费忘了、拉订阅时断网），或者订阅
+ * 里全是香港节点导致 AI 组（定义为「所有非香港节点」）为空。
  */
 config.outbounds.forEach((outbound) => {
   if (Array.isArray(outbound.outbounds) && outbound.outbounds.length === 0) {
@@ -159,14 +169,6 @@ config.outbounds.forEach((outbound) => {
     outbound.outbounds.push(compatible_outbound.tag);
   }
 });
-
-/**
- * 添加策略组到配置
- */
-
-
-
-config.outbounds.push(proxyPolicies, aiPolicies, ...autoPolicies, ...manualPolicies,  ...countryPolicies, ...proxyNodes);
 
 /**
  * 输出配置
@@ -199,17 +201,18 @@ function extractAirportNames(proxies) {
 }
 
 /**
- * 过滤掉符合正则匹配的节点
- * @param {Array} proxies - 节点数组
- * @param {RegExp} regex - 匹配规则
- * @returns {Array} - 过滤后的节点数组
- * 
+ * 转义正则元字符，把字符串当字面量匹配
+ *
+ * 地区名是从节点名切出来的，会直接进 new RegExp。rename.js 的中文地区表里有
+ * 「刚果(布)」「刚果(金)」，上游最新版还有 Myanmar(Burma) —— 括号不转义会被
+ * 当成捕获组，new RegExp("刚果(布)") 实际匹配的是「刚果布」，于是该地区组必然
+ * 为空，而空组会让 sing-box 拒绝启动。
+ *
  * 示例:
- * filterOutProxiesByRegex([{tag:"🇸🇬 SG 01"}, {tag:"🇭🇰 HK 02"}], /HK/)
- * // => [{tag:"🇸🇬 SG 01"}]
+ * escapeRegExp("刚果(布)")  // => "刚果\\(布\\)"
  */
-function filterOutProxiesByRegex(proxies, regex) {
-  return proxies.filter((proxy) => !regex.test(proxy.tag));
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
