@@ -111,7 +111,21 @@ let aiPolicies = new Policy("AI", "selector");
 aiPolicies.outbounds.push(...extractProxyTagsExcluding(proxyNodes, /(hong kong)/i));
 
 
+// 跨机场自动测速：装的是各机场的 AUTO 组，不是节点。
+//
+// 这样和平铺所有节点是等价的：sing-box 比较组的延迟时会一路往下钻到真正的
+// 节点（RealTag），所以「各机场最快里的最快」就是全局最快。但成员只有机场数
+// 那么几项，面板里比铺开一两百个节点干净得多。
+//
+// 只有一个机场时不建 —— 那时它和 <机场> AUTO 内容完全一样，纯冗余。
+let allAutoPolicy = airports.size > 1 ? new Policy("ALL AUTO", "urltest") : null;
+if (allAutoPolicy) {
+  allAutoPolicy.outbounds.push(...autoPolicies.map((p) => p.tag));
+}
+
+// ALL AUTO 排第一 —— selector 默认选中第一项，装完开箱即用就是全局最快
 proxyPolicies.outbounds.push(
+  ...(allAutoPolicy ? [allAutoPolicy.tag] : []),
   ...autoPolicies.map(p => p.tag),
   ...manualPolicies.map(p => p.tag)
 );
@@ -148,7 +162,15 @@ let countryPolicies = Array.from(countries, (countryName) => {
 /**
  * 添加策略组到配置
  */
-config.outbounds.push(proxyPolicies, aiPolicies, ...autoPolicies, ...manualPolicies, ...countryPolicies, ...proxyNodes);
+config.outbounds.push(
+  proxyPolicies,
+  aiPolicies,
+  ...(allAutoPolicy ? [allAutoPolicy] : []),
+  ...autoPolicies,
+  ...manualPolicies,
+  ...countryPolicies,
+  ...proxyNodes
+);
 
 /**
  * 兜底处理：空策略组补一个 COMPATIBLE(direct)

@@ -101,6 +101,9 @@ naixi Hong Kong 01  →  🇭🇰 naixi Hong Kong 01
 
 ```
 proxy (selector)                          ← 面板里手动选这一层
+    ALL AUTO (urltest)                    ← 跨机场，全局挑最快（默认选中）
+        naixi AUTO
+        bpjc AUTO
     naixi AUTO (urltest)                  ← 该机场全部地区，自动测速
         🇭🇰 naixi Hong Kong (urltest)
             🇭🇰 naixi Hong Kong 01
@@ -124,7 +127,8 @@ AI (selector)                             ← 平铺，直接是节点
 - **地区组**（`🇭🇰 naixi Hong Kong`）：砍掉编号后名字相同的节点归一组
 - **`<机场> AUTO`**：该机场的所有地区组，urltest 自动挑最快
 - **`<机场> MANUAL`**：内容同上，selector 让你手动挑
-- **`proxy`**：所有 AUTO + 所有 MANUAL
+- **`ALL AUTO`**：所有机场的 AUTO 组，等于在全部节点里挑最快。**只有多个机场时才生成**（单订阅时它和 `<机场> AUTO` 完全一样）
+- **`proxy`**：`ALL AUTO` + 所有 AUTO + 所有 MANUAL。默认选中第一项，也就是 `ALL AUTO`
 - **`AI`**：所有名字里不含 `hong kong` 的节点（港区 IP 在 OpenAI 那儿不好用）
 
 哪个策略组为空时，会自动塞一个 `COMPATIBLE`（直连）进去 —— 空的策略组会让 sing-box 拒绝启动。订阅拉到 0 个节点、或者订阅里全是港区节点导致 `AI` 组为空，都会走到这个兜底。
