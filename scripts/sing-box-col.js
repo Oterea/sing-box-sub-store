@@ -64,19 +64,26 @@ function Policy(tag, type) {
 
 let proxyPolicies = new Policy("proxy", "selector"); // 用户手动选择代理的分组
 
+// AUTO 装的是【节点】，不是地区组 —— 和下面的 MANUAL 刻意不一样。
+//
+// 两者用途不同，结构就不该一样：
+//   AUTO   机器按延迟自动挑 → 要准 → 扁平
+//   MANUAL 人手动浏览着选   → 要好找 → 按地区分层
+//
+// 为什么扁平更准：urltest 换节点有个 tolerance 门槛（默认 50ms），新节点要快
+// 过这个数才会被换上。套一层地区组就多一道门槛，而且上层只看得到下层当前选中
+// 的那个 —— 下层因为门槛没换掉的更快节点，上层根本看不见。两层叠起来，最坏
+// 会比该机场真正最快的慢 100ms 左右。直接装节点只有一道门槛。
+//
+// 地区组仍然会生成，只是不再被 AUTO 引用，只挂在 MANUAL 下面。MANUAL 是
+// selector 不测速，没有这个问题。
 let autoPolicies = Array.from(airports, (airport) => {
-  // 拼接策略组名字，比如加上 "Auto-"
-  let policyName = `${airport} AUTO`;
+  let policy = new Policy(`${airport} AUTO`, "urltest");
 
-  let policy = new Policy(policyName, "urltest");
-
-  // 遍历 countries，找到和机场匹配的策略组
   policy.outbounds.push(
-    ...Array.from(countries).filter((countryName) => {
-      let parts = countryName.split(" ");
-      let countryAirport = parts[1]; // 第二个部分是机场名
-      return countryAirport === airport;
-    })
+    ...proxyNodes
+      .filter((node) => node.tag.split(" ")[1] === airport)
+      .map((node) => node.tag)
   );
 
   return policy;

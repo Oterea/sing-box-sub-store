@@ -104,16 +104,17 @@ proxy (selector)                          ← 面板里手动选这一层
     ALL AUTO (urltest)                    ← 跨机场，全局挑最快（默认选中）
         naixi AUTO
         bpjc AUTO
-    naixi AUTO (urltest)                  ← 该机场全部地区，自动测速
+    naixi AUTO (urltest)                  ← 该机场全部节点，扁平
+        🇭🇰 naixi Hong Kong 01
+        🇭🇰 naixi Hong Kong 02
+        🇯🇵 naixi Japan 01
+    bpjc AUTO (urltest)
+        🇺🇸 bpjc United States 01
+        🇸🇬 bpjc Singapore 01
+    naixi MANUAL (selector)               ← 按地区分层，方便手动浏览
         🇭🇰 naixi Hong Kong (urltest)
             🇭🇰 naixi Hong Kong 01
             🇭🇰 naixi Hong Kong 02
-        🇯🇵 naixi Japan (urltest)
-    bpjc AUTO (urltest)
-        🇺🇸 bpjc United States (urltest)
-        🇸🇬 bpjc Singapore (urltest)
-    naixi MANUAL (selector)               ← 同样的地区，改成手动选
-        🇭🇰 naixi Hong Kong (urltest)
         🇯🇵 naixi Japan (urltest)
     bpjc MANUAL (selector)
         …
@@ -124,12 +125,20 @@ AI (selector)                             ← 平铺，直接是节点
     …
 ```
 
-- **地区组**（`🇭🇰 naixi Hong Kong`）：砍掉编号后名字相同的节点归一组
-- **`<机场> AUTO`**：该机场的所有地区组，urltest 自动挑最快
-- **`<机场> MANUAL`**：内容同上，selector 让你手动挑
-- **`ALL AUTO`**：所有机场的 AUTO 组，等于在全部节点里挑最快。**只有多个机场时才生成**（单订阅时它和 `<机场> AUTO` 完全一样）
+- **`<机场> AUTO`**（urltest）：该机场的**所有节点**，自动挑最快。刻意做成扁平的 —— 见下方说明
+- **`<机场> MANUAL`**（selector）：该机场的**地区组**，让你手动挑地区
+- **地区组**（`🇭🇰 naixi Hong Kong`）：砍掉编号后名字相同的节点归一组。只挂在 MANUAL 下面
+- **`ALL AUTO`**（urltest）：所有机场的 AUTO 组。**只有多个机场时才生成**（单订阅时它和 `<机场> AUTO` 完全一样）
 - **`proxy`**：`ALL AUTO` + 所有 AUTO + 所有 MANUAL。默认选中第一项，也就是 `ALL AUTO`
-- **`AI`**：所有名字里不含 `hong kong` 的节点（港区 IP 在 OpenAI 那儿不好用）
+- **`AI`**（selector）：所有名字里不含 `hong kong` 的节点（港区 IP 在 OpenAI 那儿不好用）。selector 不自动切换，出口 IP 稳定 —— AI 服务频繁换 IP 容易触发人机验证
+
+### 为什么 AUTO 扁平、MANUAL 分层
+
+两者用途不同，结构就不该一样：AUTO 是机器按延迟自动挑，要**准**；MANUAL 是人手动浏览着选，要**好找**。
+
+urltest 换节点有个 `tolerance` 门槛（默认 50ms），新节点要快过这个数才会被换上。每套一层就多一道门槛，而且上层只看得到下层当前选中的那个 —— 下层因为门槛没换掉的更快节点，上层根本看不见。所以 AUTO 直接装节点，只有一道门槛。
+
+MANUAL 是 selector，不测速，没有这个问题，保留地区分层反而好用。
 
 哪个策略组为空时，会自动塞一个 `COMPATIBLE`（直连）进去 —— 空的策略组会让 sing-box 拒绝启动。订阅拉到 0 个节点、或者订阅里全是港区节点导致 `AI` 组为空，都会走到这个兜底。
 
