@@ -46,24 +46,28 @@ let originProxyNodes = await produceArtifact({
 const airportOfTag = new Map();
 if (internalType === "collection") {
   const col = ($substore.read("collections") || []).find((c) => c.name === name);
-  for (const subName of (col && col.subscriptions) || []) {
-    let subNodes = [];
-    try {
-      subNodes = await produceArtifact({
-        name: subName,
-        type: "subscription",
-        platform: "sing-box",
-        produceType: "internal",
-      });
-    } catch (e) {
-      // 单个订阅取不到不该拖垮整份配置：它的节点本来也不会出现在组合订阅里，
-      // 索引里少它一份即可，剩下的机场照常
-      console.log(`[col] 订阅 ${subName} 取回失败，跳过建索引: ${e.message ?? e}`);
-    }
+  if (!col) throw new Error(`找不到组合订阅「${name}」`);
+  for (const subName of col.subscriptions || []) {
+    // 取不到就让它抛出去。这一步失败意味着后面分不清节点归属，硬撑下去只会
+    // 产出一份看着正常、实际分组错乱的配置
+    const subNodes = await produceArtifact({
+      name: subName,
+      type: "subscription",
+      platform: "sing-box",
+      produceType: "internal",
+    });
     subNodes.forEach((node) => {
-      // 先到先得。两个订阅出现同名 tag 说明前缀撞了（都手写了同一个 name=），
-      // sing-box 那边也会因为 outbound tag 重复而静默覆盖，属于配置错误
-      if (!airportOfTag.has(node.tag)) airportOfTag.set(node.tag, subName);
+      // 两个订阅出现同名节点说明前缀撞了（都手写了同一个 name=）。
+      // sing-box 对重复的 outbound tag 不报错，后面的会静默覆盖前面的，
+      // 等于悄悄少节点 —— 在这里拦住
+      const owner = airportOfTag.get(node.tag);
+      if (owner && owner !== subName) {
+        throw new Error(
+          `订阅「${owner}」和「${subName}」都有节点「${node.tag}」，` +
+            `给它们的 rename.js 设置不同的 name= 前缀`
+        );
+      }
+      airportOfTag.set(node.tag, subName);
     });
   }
 } else {
@@ -71,12 +75,20 @@ if (internalType === "collection") {
   originProxyNodes.forEach((node) => airportOfTag.set(node.tag, name));
 }
 
-// 索引里没有的（组合订阅那层的操作改过名、或订阅取回失败）退回老办法：数第 2 个词
+// 查不到就报错。会走到这里只有一种情况：组合订阅自己的【节点操作】改了节点名，
+// 于是这里的名字和逐订阅取回时的名字对不上。
+// 不猜、不退回旧的词序解析 —— 猜错的结果是一份看着正常、分组却是错的配置，
+// 而那种错误你可能几天都发现不了
 function airportOf(tag) {
   const known = airportOfTag.get(tag);
-  if (known) return known;
-  const parts = tag.split(" ");
-  return parts.length > 1 ? parts[1] : "";
+  if (!known) {
+    throw new Error(
+      `节点「${tag}」对不上任何订阅。` +
+        `组合订阅「${name}」自己的【节点操作】里如果有会改节点名的，去掉它 —— ` +
+        `改名只该发生在各个订阅上`
+    );
+  }
+  return known;
 }
 
 // ===========================================
