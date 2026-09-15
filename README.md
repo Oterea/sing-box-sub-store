@@ -44,12 +44,16 @@ Sub-Store 本身怎么搭建不在这里讲，[参考教程](https://www.youtube
 
 参数：
 
-| 参数 | 值 | 说明 |
-|---|---|---|
-| `name` | `naixi` | 加在节点名里的**机场前缀**，改成你自己认得出的名字 |
-| `out` | `quan` | 输出英文全称（`Hong Kong` 而不是 `香港` 或 `HK`） |
+**通常什么参数都不用填**，脚本地址直接写 `…/scripts/rename.js` 即可：
 
-产物：`naixi Hong Kong 01`、`naixi United States 02`
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `name` | **自动取 Sub-Store 里这条订阅的名字** | 加在节点名里的机场前缀。想用别的名字就手写 `name=xxx` 覆盖 |
+| `out` | `quan`（英文全称） | 输出 `Hong Kong` 而不是 `香港` 或 `HK`。想要中文写 `out=cn` |
+
+产物：订阅名叫 `naixi` 就得到 `naixi Hong Kong 01`、`naixi United States 02`
+
+> ⚠️ **订阅名不要带空格。** 下一步的 `sing-box-col.js` 是按第几个词来拆节点名的（见下），前缀占掉一个词的位置。订阅名叫 `naixi cloud` 的话，整个解析会错位一格。
 
 其余参数见脚本开头的注释。**但不要加 `one` / `blgd` / `bl` / `blkey` / `sn=`** —— 它们会改变节点名的结构，而下一步的分组依赖这个结构。
 
@@ -89,11 +93,12 @@ naixi Hong Kong 01  →  🇭🇰 naixi Hong Kong 01
 | `name` | `naixi` | **Sub-Store 里那个订阅的名字**，用来找订阅 |
 | `type` | `col` | 只有组合订阅才需要填。单订阅不填 |
 
-> ⚠️ 两个脚本都有 `name=`，但**含义完全不同**：
-> - `rename.js` 的 `name=` → 写进节点名里的前缀
+> 两个脚本都有 `name=`，含义**完全不同**：
+> - `rename.js` 的 `name=` → 写进节点名里的前缀（现在默认自动取订阅名）
 > - `sing-box-col.js` 的 `name=` → 拿来找订阅的名字
 >
-> 建议填成同一个值：这样面板里的策略组（`naixi AUTO`）和订阅名对得上，好认。功能上它们互相独立。
+> 以前要手动把两边填成同一个值，否则策略组名和订阅名对不上。现在 `rename.js`
+> 不填就自动取订阅名，和这里的 `name` 天然一致，不用再操心。
 
 ## 产出的策略组
 
@@ -146,13 +151,22 @@ MANUAL 是 selector，不测速，没有这个问题，保留地区分层反而�
 
 多个机场合成一个订阅时，`sing-box-col.js` 加 `type=col`。
 
-**每个子订阅的 `rename.js` 必须用不同的 `name=` 前缀。** 都填 `naixi` 的话，两个机场会被当成同一个机场合并，而且节点名会撞车 —— sing-box 对重复的 outbound tag 不报错，后面的会静默覆盖前面的，等于悄悄少了节点。
+每个子订阅必须有**不同的**机场前缀。`rename.js` 默认取各自的订阅名，而订阅名在
+Sub-Store 里本来就不能重复，所以这一条现在自动成立 —— 除非你手写了 `name=`，
+那就得自己保证别撞。
+
+撞了会怎样：两个机场被当成同一个合并，节点名也会重复 —— sing-box 对重复的
+outbound tag 不报错，后面的会静默覆盖前面的，等于悄悄少了节点。
+
+**另外：`rename.js` 只挂在【订阅】上，不要也挂到【组合订阅】上。** 它是把名字
+整个重造的，在组合订阅那层再跑一遍会重新识别、重新编号，而那一层拿不到单个
+机场的名字，前缀会被洗掉。
 
 ## scripts
 
 | 脚本 | 作用 | 来源 |
 |---|---|---|
-| `rename.js` | 节点重命名 | 来自 [Keywos/rule](https://github.com/Keywos/rule)，未修改 |
+| `rename.js` | 节点重命名 | 来自 [Keywos/rule](https://github.com/Keywos/rule)，有两处改动：`name` 不填时自动取订阅名、`out` 默认改成 `quan` |
 | `sing-box-col.js` | 把节点装进模板，生成策略组 | 本仓库 |
 | `node_info.js` | 把订阅流量/到期信息做成一个节点 | 来自 [xream/scripts](https://github.com/xream/scripts) 的 `sub-info/node.js` |
 
