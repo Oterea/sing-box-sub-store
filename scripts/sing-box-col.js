@@ -30,6 +30,56 @@ let originProxyNodes = await produceArtifact({
 });
 
 // ===========================================
+// tag -> 机场 索引
+// ===========================================
+//
+// 机场名原本是从节点名里数出来的（第 2 个词），这有三个隐含前提：第 0 个词是
+// 国旗、机场名正好一个词、最后一段是编号。任何一条不成立都会静默出错 ——
+// 不报错，只是分组悄悄错乱。订阅名带空格是最容易踩的（rename.js 现在默认
+// 拿订阅名当前缀）。
+//
+// 这里改成：挨个订阅单独取一遍，取到什么就记什么是谁的。机场身份从「猜」
+// 变成「已知」。
+//
+// 节点来源仍然是组合订阅那一次取回，没有改 —— 只按订阅取的话，会跳过组合
+// 订阅自己那层的节点操作。这里的逐订阅取回只用来建索引，不参与产出。
+const airportOfTag = new Map();
+if (internalType === "collection") {
+  const col = ($substore.read("collections") || []).find((c) => c.name === name);
+  for (const subName of (col && col.subscriptions) || []) {
+    let subNodes = [];
+    try {
+      subNodes = await produceArtifact({
+        name: subName,
+        type: "subscription",
+        platform: "sing-box",
+        produceType: "internal",
+      });
+    } catch (e) {
+      // 单个订阅取不到不该拖垮整份配置：它的节点本来也不会出现在组合订阅里，
+      // 索引里少它一份即可，剩下的机场照常
+      console.log(`[col] 订阅 ${subName} 取回失败，跳过建索引: ${e.message ?? e}`);
+    }
+    subNodes.forEach((node) => {
+      // 先到先得。两个订阅出现同名 tag 说明前缀撞了（都手写了同一个 name=），
+      // sing-box 那边也会因为 outbound tag 重复而静默覆盖，属于配置错误
+      if (!airportOfTag.has(node.tag)) airportOfTag.set(node.tag, subName);
+    });
+  }
+} else {
+  // 单订阅：机场就是它自己，不用问
+  originProxyNodes.forEach((node) => airportOfTag.set(node.tag, name));
+}
+
+// 索引里没有的（组合订阅那层的操作改过名、或订阅取回失败）退回老办法：数第 2 个词
+function airportOf(tag) {
+  const known = airportOfTag.get(tag);
+  if (known) return known;
+  const parts = tag.split(" ");
+  return parts.length > 1 ? parts[1] : "";
+}
+
+// ===========================================
 // 预处理节点
 // ===========================================
 
@@ -37,16 +87,23 @@ let proxyNodes = originProxyNodes;
 // 通过节点 tag 提取国家/地区名集合（去掉节点编号部分）
 // 例如: 🇸🇬 Singapore 01 → 🇸🇬 Singapore
 let countries = new Set();
+// 地区键按机场分桶，省得 manualPolicies 再去地区名里数第 2 个词
+const countriesOfAirport = new Map();
 proxyNodes.forEach((obj) => {
   // 去掉末尾编号得到地区名。节点名里没有空格时切出来是空串（rename.js 的 nm
   // 参数会原样保留没匹配上的节点，这类名字可能就没有空格）—— 空串会造出一个
   // tag 为 "" 的策略组，而 new RegExp("") 匹配一切，等于把所有节点又收一遍
   const country = obj.tag.split(" ").slice(0, -1).join(" ");
-  if (country) countries.add(country);
+  if (!country) return;
+  countries.add(country);
+  const ap = airportOf(obj.tag);
+  if (!countriesOfAirport.has(ap)) countriesOfAirport.set(ap, new Set());
+  countriesOfAirport.get(ap).add(country);
 });
 
-// 获取所有机场名字
-let airports = extractAirportNames(proxyNodes);
+// 机场清单：从索引来，不再从节点名解析。
+// 只收真的有节点的 —— 订阅拉到 0 个节点时不该建一个空的 <机场> AUTO
+let airports = new Set(proxyNodes.map((node) => airportOf(node.tag)).filter(Boolean));
 
 // ===========================================
 // 策略组构造函数
@@ -82,7 +139,7 @@ let autoPolicies = Array.from(airports, (airport) => {
 
   policy.outbounds.push(
     ...proxyNodes
-      .filter((node) => node.tag.split(" ")[1] === airport)
+      .filter((node) => airportOf(node.tag) === airport)
       .map((node) => node.tag)
   );
 
@@ -94,14 +151,8 @@ let manualPolicies = Array.from(airports, (airport) => {
   let policyName = `${airport} MANUAL`;
   let policy = new Policy(policyName, "selector");
 
-  // 遍历 countries，找到和机场匹配的策略组
-  policy.outbounds.push(
-    ...Array.from(countries).filter((countryName) => {
-      let parts = countryName.split(" ");
-      let countryAirport = parts[1]; // 第二个部分是机场名
-      return countryAirport === airport;
-    })
-  );
+  // 该机场有哪些地区组，建索引时已经分好桶了
+  policy.outbounds.push(...Array.from(countriesOfAirport.get(airport) || []));
 
   return policy;
 });
@@ -208,26 +259,6 @@ $content = JSON.stringify(config, null, 2);
 // ===========================================
 // 工具函数
 // ===========================================
-
-/**
- * 提取所有机场名字（假设机场名字在 tag 的第二个部分）
- * @param {Array} proxies - 节点数组
- * @returns {Set} - 机场名字集合
- *
- * 示例:
- * extractAirportNames([{tag:"🇸🇬 B Singapore 01"}, {tag:"🇭🇰 A HongKong 02"}])
- * // => Set { "B", "A" }
- */
-function extractAirportNames(proxies) {
-  let airports = new Set();
-  proxies.forEach((obj) => {
-    let parts = obj.tag.split(" ");
-    if (parts.length > 1) {
-      airports.add(parts[1]);
-    }
-  });
-  return airports;
-}
 
 /**
  * 转义正则元字符，把字符串当字面量匹配
