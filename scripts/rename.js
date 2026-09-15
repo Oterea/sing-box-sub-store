@@ -14,7 +14,7 @@
  * [in=quan] 识别英文全称
 
  *
- * [out=]   输出节点名可选参数: (cn或zh ，us或en ，gq或flag ，quan) 对应：(中文，英文缩写 ，国旗 ，英文全称) 默认中文 例如 [out=en] 或 out=us 输出英文缩写
+ * [out=]   输出节点名可选参数: (cn或zh ，us或en ，gq或flag ，quan) 对应：(中文，英文缩写 ，国旗 ，英文全称) 默认英文全称(quan) 例如 [out=en] 或 out=us 输出英文缩写
  *** 分隔符参数
  *
  * [fgf=]   节点名前缀或国旗分隔符，默认为空格；
@@ -54,7 +54,7 @@ const nx = inArg.nx || false,
   addflag = inArg.flag || false,
   nm = inArg.nm || false;
 
-const FGF = inArg.fgf == undefined ? " " : decodeURI(inArg.fgf),
+let FGF = inArg.fgf == undefined ? " " : decodeURI(inArg.fgf),
   XHFGF = inArg.sn == undefined ? " " : decodeURI(inArg.sn),
   FNAME = inArg.name == undefined ? "" : decodeURI(inArg.name),
   BLKEY = inArg.blkey == undefined ? "" : decodeURI(inArg.blkey),
@@ -69,7 +69,10 @@ const FGF = inArg.fgf == undefined ? " " : decodeURI(inArg.fgf),
     flag: "gq",
   },
   inname = nameMap[inArg.in] || "",
-  outputName = nameMap[inArg.out] || "";
+  // 输出默认英文全称。上游默认是中文（兜底值为空 -> getList 落到 ZH），
+  // 这里改成 quan，订阅里就不用每条都写 out=quan 了。
+  // in 那条不动 —— 它为空走的是 [ZH,FG,QC,EN] 全表自动识别，跟这里无关
+  outputName = nameMap[inArg.out] || "quan";
 // prettier-ignore
 const FG = ['🇭🇰','🇲🇴','🇹🇼','🇯🇵','🇰🇷','🇸🇬','🇺🇸','🇬🇧','🇫🇷','🇩🇪','🇦🇺','🇦🇪','🇦🇫','🇦🇱','🇩🇿','🇦🇴','🇦🇷','🇦🇲','🇦🇹','🇦🇿','🇧🇭','🇧🇩','🇧🇾','🇧🇪','🇧🇿','🇧🇯','🇧🇹','🇧🇴','🇧🇦','🇧🇼','🇧🇷','🇻🇬','🇧🇳','🇧🇬','🇧🇫','🇧🇮','🇰🇭','🇨🇲','🇨🇦','🇨🇻','🇰🇾','🇨🇫','🇹🇩','🇨🇱','🇨🇴','🇰🇲','🇨🇬','🇨🇩','🇨🇷','🇭🇷','🇨🇾','🇨🇿','🇩🇰','🇩🇯','🇩🇴','🇪🇨','🇪🇬','🇸🇻','🇬🇶','🇪🇷','🇪🇪','🇪🇹','🇫🇯','🇫🇮','🇬🇦','🇬🇲','🇬🇪','🇬🇭','🇬🇷','🇬🇱','🇬🇹','🇬🇳','🇬🇾','🇭🇹','🇭🇳','🇭🇺','🇮🇸','🇮🇳','🇮🇩','🇮🇷','🇮🇶','🇮🇪','🇮🇲','🇮🇱','🇮🇹','🇨🇮','🇯🇲','🇯🇴','🇰🇿','🇰🇪','🇰🇼','🇰🇬','🇱🇦','🇱🇻','🇱🇧','🇱🇸','🇱🇷','🇱🇾','🇱🇹','🇱🇺','🇲🇰','🇲🇬','🇲🇼','🇲🇾','🇲🇻','🇲🇱','🇲🇹','🇲🇷','🇲🇺','🇲🇽','🇲🇩','🇲🇨','🇲🇳','🇲🇪','🇲🇦','🇲🇿','🇲🇲','🇳🇦','🇳🇵','🇳🇱','🇳🇿','🇳🇮','🇳🇪','🇳🇬','🇰🇵','🇳🇴','🇴🇲','🇵🇰','🇵🇦','🇵🇾','🇵🇪','🇵🇭','🇵🇹','🇵🇷','🇶🇦','🇷🇴','🇷🇺','🇷🇼','🇸🇲','🇸🇦','🇸🇳','🇷🇸','🇸🇱','🇸🇰','🇸🇮','🇸🇴','🇿🇦','🇪🇸','🇱🇰','🇸🇩','🇸🇷','🇸🇿','🇸🇪','🇨🇭','🇸🇾','🇹🇯','🇹🇿','🇹🇭','🇹🇬','🇹🇴','🇹🇹','🇹🇳','🇹🇷','🇹🇲','🇻🇮','🇺🇬','🇺🇦','🇺🇾','🇺🇿','🇻🇪','🇻🇳','🇾🇪','🇿🇲','🇿🇼','🇦🇩','🇷🇪','🇵🇱','🇬🇺','🇻🇦','🇱🇮','🇨🇼','🇸🇨','🇦🇶','🇬🇮','🇨🇺','🇫🇴','🇦🇽','🇧🇲','🇹🇱']
 // prettier-ignore
@@ -138,7 +141,23 @@ function ObjKA(i) {
   AMK = Object.entries(i)
 }
 
-function operator(pro) {
+function operator(pro, targetPlatform, context) {
+  // 没手写 name= 时，自动取当前订阅的名字当前缀。
+  // Sub-Store 把来源挂在第三个参数 context.source 上，键就是订阅名：
+  //   单独拉订阅            { "deg": {…} }
+  //   组合订阅里的成员订阅   { "deg": {…}, _collection: {…}, $options: {…} }
+  //   组合订阅自己的脚本     { _collection: {…} }  <- 没有单个订阅，保持为空
+  // 取 name 而不是 displayName：displayName 常是中文，当节点前缀会占双宽。
+  // 实测于 Sub-Store 2.34.0。
+  if (!FNAME && context && context.source) {
+    const subKey = Object.keys(context.source).find(
+      (k) => k !== "_collection" && k !== "$options"
+    );
+    if (subKey && context.source[subKey]) {
+      FNAME = context.source[subKey].name || "";
+    }
+  }
+
   const Allmap = {};
   const outList = getList(outputName);
   let inputList,
