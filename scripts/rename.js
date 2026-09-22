@@ -335,10 +335,13 @@ function operator(pro, targetPlatform, context) {
   if (INFOTAG) {
     const subName = pro[0]?._subName;
     if (subName) {
+      // TTL 给 7 天而不是 24 小时：客户端通常是每天定时拉一次配置，24 小时的
+      // TTL 和刷新周期正好卡齐，哪天拉取失败或晚了几分钟，缓存就过期、INFO
+      // 组直接空掉。留足余量，偶尔断一两次不影响显示。
       scriptResourceCache.set(
         `${INFOTAG}:${subName}`,
         infoNames,
-        24 * 3600 * 1000
+        7 * 24 * 3600 * 1000
       );
     }
   }
