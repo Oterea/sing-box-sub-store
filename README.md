@@ -1,5 +1,9 @@
 # sing-box-sub-store
 
+## 预览
+<img width="3814" height="1902" alt="CleanShot 2026-09-22 at 13 31 52@2x" src="https://github.com/user-attachments/assets/d4c3a550-d0e0-4554-a8a0-9df7828723ed" />
+
+
 用 [Sub-Store](https://github.com/sub-store-org/Sub-Store) 把机场订阅加工成 sing-box 配置。
 
 - `scripts/` —— 挂在 Sub-Store 上的脚本
