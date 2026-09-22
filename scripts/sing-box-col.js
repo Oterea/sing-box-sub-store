@@ -124,7 +124,15 @@ function Policy(tag, type) {
   this.tag = tag;
   this.type = type;
   this.outbounds = []; // 子节点或分组
-  this.interrupt_exist_connections = false; // 是否中断已有连接
+  // 切换节点时掐断已有连接。
+  //
+  // 不掐的代价是实的：组已经切到活节点了，你手上的连接还挂在死节点上，直到
+  // 自己超时。手动切换同理 —— 点了新节点，正在跑的连接还走着老的。
+  //
+  // 官方文档：「Only inbound connections are affected by this setting,
+  // internal connections will always be interrupted.」受影响的是从入站进来
+  // 的连接，也就是你实际上网的那些；sing-box 自己发起的内部连接本来就一律掐。
+  this.interrupt_exist_connections = true;
 }
 
 // ===========================================
@@ -183,6 +191,35 @@ aiPolicies.outbounds.push(...extractProxyTagsExcluding(proxyNodes, /(hong kong)/
 
 // 跨机场自动测速：装的是各机场的 AUTO 组，不是节点。
 //
+// ── 实验组：<机场> FAST ──────────────────────────────────────────────
+// 和 <机场> AUTO 同成员、同结构，唯一的区别是测速间隔从默认 3 分钟改成 30 秒。
+//
+// 存在的目的是做对照，只变一个变量，切过去用几天就能回答两个问题：
+//   1. 节点挂掉之后多久切走（3 分钟 vs 30 秒）
+//   2. 测速多出来的流量在机场后台是否看得出来
+//
+// 为什么故障切换只能靠 interval：拨号失败时 sing-box【不会】自动换个节点重试，
+// 它只把失败节点的测速记录删掉，然后把错误抛给应用。要等下一次定时测速才会把
+// 它踢出候选、换成活的。所以「节点挂了多久能切走」的上限就是 interval。
+//
+// 不传 fast= 就不生成，产出与不加这段时逐字节相同。
+const fastAirport = $arguments.fast;
+let fastPolicy = null;
+if (fastAirport) {
+  if (!airports.has(fastAirport)) {
+    throw new Error(
+      `fast=${fastAirport} 不是这个订阅里的机场，当前有：${[...airports].join("、")}`
+    );
+  }
+  fastPolicy = new Policy(`${fastAirport} FAST`, "urltest");
+  fastPolicy.interval = "30s";
+  fastPolicy.outbounds.push(
+    ...proxyNodes
+      .filter((node) => airportOf(node.tag) === fastAirport)
+      .map((node) => node.tag)
+  );
+}
+
 // 这样和平铺所有节点是等价的：sing-box 比较组的延迟时会一路往下钻到真正的
 // 节点（RealTag），所以「各机场最快里的最快」就是全局最快。但成员只有机场数
 // 那么几项，面板里比铺开一两百个节点干净得多。
@@ -193,10 +230,19 @@ if (allAutoPolicy) {
   allAutoPolicy.outbounds.push(...autoPolicies.map((p) => p.tag));
 }
 
-// ALL AUTO 排第一 —— selector 默认选中第一项，装完开箱即用就是全局最快
+// ALL AUTO 排第一 —— selector 默认选中第一项，装完开箱即用就是全局最快。
+// FAST 紧跟在它镜像的那个 AUTO 后面，面板上两个挨着，方便来回切着对比
+let autoTags = [];
+autoPolicies.forEach((policy) => {
+  autoTags.push(policy.tag);
+  if (fastPolicy && policy.tag === `${fastAirport} AUTO`) {
+    autoTags.push(fastPolicy.tag);
+  }
+});
+
 proxyPolicies.outbounds.push(
   ...(allAutoPolicy ? [allAutoPolicy.tag] : []),
-  ...autoPolicies.map(p => p.tag),
+  ...autoTags,
   ...manualPolicies.map(p => p.tag)
 );
 
@@ -237,6 +283,7 @@ config.outbounds.push(
   aiPolicies,
   ...(allAutoPolicy ? [allAutoPolicy] : []),
   ...autoPolicies,
+  ...(fastPolicy ? [fastPolicy] : []),
   ...manualPolicies,
   ...countryPolicies,
   ...proxyNodes
