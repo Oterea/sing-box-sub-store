@@ -279,21 +279,7 @@ if (INFOTAG) {
       }
     }
 
-    // 二次筛选：踢掉混进来的真节点。
-    //
-    // 来源是 rename.js 丢弃的那批，而它丢弃的理由是「地区表里没有」——
-    // 那张表只有 180 来个国家，冷门地区（安提瓜和巴布达、所罗门群岛…）不在
-    // 里面，于是能用的真节点也被当垃圾丢了，跟着混进这里。
-    //
-    // Sub-Store 自己的地区表有 254 个国家，正好补上这个缺口。getISO 认得出
-    // 地区的就是真节点，踢出去。'EXP' 例外 —— 那是彩虹旗 🏳️‍🌈 对应的 ISO 码，
-    // Sub-Store 专门用它标记名字里带「流量/时间/过期」的条目，正是要留的。
-    got
-      .filter((text) => {
-        const iso = ProxyUtils.getISO(text);
-        return !iso || iso === "EXP";
-      })
-      .forEach((text) => lines.push(`${airport} ${text}`));
+    got.forEach((text) => lines.push(`${airport} ${text}`));
   }
 
   if (lines.length) {
