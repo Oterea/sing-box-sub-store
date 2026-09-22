@@ -54,6 +54,20 @@ const nx = inArg.nx || false,
   addflag = inArg.flag || false,
   nm = inArg.nm || false;
 
+// ── 本仓库的增量改动（上游 Keywos/rule 没有）──────────────────────────
+// infotag: 机场塞在节点列表里的流量/到期公告（「剩余流量：78.29 GB」这类），
+// 本脚本认不出地区，会当成垃圾丢掉。传了这个参数就把它们的【原始名字】收集
+// 起来写进缓存，由 sing-box-col.js 取用，建成一个 INFO 组。
+//
+// 为什么走缓存而不是把节点留在列表里：公告节点要活着传到下游，得依次骗过
+// Useless Filter、本脚本、Flag Operator、Region Filter 四道关卡。其中
+// Region Filter 按地区白名单保留，而公告节点的 getFlag 是 🏳️‍🌈 或 🏴‍☠️，
+// 必被剔除且没有放行选项 —— 所以那条路走不通。走缓存就完全绕开整条链。
+//
+// 不传 infotag 时下面两处分支永远不进，行为与上游逐字节等价。
+const INFOTAG = inArg.infotag == undefined ? "" : decodeURI(inArg.infotag);
+const infoNames = [];
+
 let FGF = inArg.fgf == undefined ? " " : decodeURI(inArg.fgf),
   XHFGF = inArg.sn == undefined ? " " : decodeURI(inArg.sn),
   FNAME = inArg.name == undefined ? "" : decodeURI(inArg.name),
@@ -298,6 +312,10 @@ function operator(pro, targetPlatform, context) {
         .filter((k) => k !== "");
       e.name = keyover.join(FGF);
     } else {
+      // 认不出地区。收集的是 ens（本轮开头存下的【原文】），不是 e.name ——
+      // 上面 rurekey 那段预处理已经改写过 e.name 了，其中 G: /\d\s?GB/gi 会把
+      // 「78.29 GB」压成「78.2G」，小数位丢一位。公告要的就是原话，不能用改写过的。
+      if (INFOTAG) infoNames.push(ens);
       if (nm) {
         e.name = FNAME + FGF + e.name;
       } else {
@@ -310,6 +328,21 @@ function operator(pro, targetPlatform, context) {
   numone && oneP(pro);
   blpx && (pro = fampx(pro));
   key && (pro = pro.filter((e) => !keyb.test(e.name)));
+
+  // 缓存键用【订阅名】而不是 name= 前缀 —— 那两个含义不同、可以不一致，
+  // 而 sing-box-col.js 那边的机场标识正是订阅名。_subName 是 Sub-Store 在
+  // 跑节点操作之前挂到每个节点上的。
+  if (INFOTAG) {
+    const subName = pro[0]?._subName;
+    if (subName) {
+      scriptResourceCache.set(
+        `${INFOTAG}:${subName}`,
+        infoNames,
+        24 * 3600 * 1000
+      );
+    }
+  }
+
   return pro;
 }
 

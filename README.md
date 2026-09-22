@@ -197,6 +197,67 @@ urltest 自动切）时，已经建立的连接会被掐掉，应用重连后走
 > 受这个开关影响的是**从入站进来的连接**，也就是你实际上网的那些。sing-box 自己
 > 发起的内部连接（规则集下载、测速）本来就一律掐断，不受这个开关保护。
 
+## 机场流量信息（INFO 组）
+
+给 `rename.js` 和 `sing-box-col.js` 都传上同一个 `infotag`，面板里会多出一个
+`INFO` 组，把各机场的剩余流量和到期时间摆在一起：
+
+```
+INFO (selector)
+    tolink 剩余流量：78.29 GB
+    tolink 下次重置：25 天后
+    tolink 套餐到期：2026-10-17
+    pei 已用流量：2.87G / 100.00G
+    pei 套餐到期：2026-10-05
+    pei 剩余天数：13 天
+```
+
+```
+rename.js        …&infotag=___INFO___
+sing-box-col.js  …&infotag=___INFO___
+```
+
+两边的值必须一致。**不传就完全没有这个功能**，两个脚本的产出和不带它时逐字节相同。
+
+### 信息从哪来
+
+机场给流量信息有两种方式，这里都支持：
+
+| 方式 | 谁给的 | 怎么取 |
+|---|---|---|
+| **订阅响应头** | 多数机场。`subscription-userinfo: upload=…; download=…; total=…; expire=…` | `sing-box-col.js` 直接读 |
+| **假节点** | 少数机场。往节点列表里塞几个名字是公告的节点 | `rename.js` 收集，见下 |
+
+顺序是**假节点优先、响应头兜底**。因为有的机场两样都给，但响应头里全是 0
+（`upload=0; download=0; total=0`）—— 先读头会显示成 0。代码里用 `total > 0` 挡住这种。
+
+### 假节点为什么要绕一圈
+
+那些公告节点（`剩余流量：78.29 GB`）认不出地区，`rename.js` 会当垃圾丢掉。
+想让它们活着传到 `sing-box-col.js`，得依次骗过四道关卡：
+
+```
+Useless Filter → rename.js → Flag Operator → Region Filter
+```
+
+其中 **Region Filter 按地区白名单保留**，而公告节点的 `getFlag` 返回的是
+🏳️‍🌈 或 🏴‍☠️，不在任何地区里，**必被剔除且没有放行选项**。这条路走不通。
+
+所以改成：`rename.js` 在丢弃它们之前，把**原始名字**写进 Sub-Store 的脚本缓存
+（键是 `<infotag>:<订阅名>`），`sing-box-col.js` 直接从缓存取。信息根本不进节点流，
+四道关卡一道都碰不到。
+
+`INFO` 组的成员是现造的 `direct` 类型出站——信息节点不是用来连的，万一误选也只是
+直连。而且这个组**不放进 `proxy`**，日常切节点碰不到它。
+
+### 要改的订阅配置
+
+**必须关掉 Quick Setting 里的 `useless`**。它排在 `rename.js` 前面，会先把
+「剩余流量」这类节点删掉（它的判据是名字里有没有 `网址|流量|时间|应急|过期|Bandwidth|expire`），
+rename 就收集不到了。
+
+其余操作（Flag Operator、Region Filter）一个字都不用改。
+
 ## 组合订阅
 
 多个机场合成一个订阅时，`sing-box-col.js` 加 `type=col`。

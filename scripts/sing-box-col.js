@@ -225,6 +225,69 @@ if (fastAirport) {
 // 那么几项，面板里比铺开一两百个节点干净得多。
 //
 // 只有一个机场时不建 —— 那时它和 <机场> AUTO 内容完全一样，纯冗余。
+// ── INFO 组：把各机场的流量/到期信息摆出来 ──────────────────────────────
+//
+// 两种来源，按机场逐个试：
+//   ① 缓存   机场把信息塞在节点列表里当假节点（「剩余流量：78.29 GB」）。
+//            那种节点认不出地区，rename.js 会丢掉 —— 它丢之前顺手写进了缓存，
+//            键是 `${infotag}:${订阅名}`。两边的 infotag 参数必须一致。
+//   ② 响应头 机场在订阅 URL 的 subscription-userinfo 头里给。这是标准做法，
+//            多数机场走这条。
+//
+// 顺序是「缓存优先、响应头兜底」，因为有的机场两样都给，但头里全是 0
+//（upload=0; download=0; total=0），先读头会显示成 0。下面用 total > 0 挡住。
+//
+// 成员造成 direct 类型：信息节点不是用来连的，万一误选也只是直连，不会莫名
+// 其妙走了别人的线路。而且这个组不放进 proxy，日常操作根本碰不到它。
+//
+// 不传 infotag 就整段不生效，产出与不带这个功能时逐字节相同。
+const INFOTAG = $arguments.infotag;
+let infoPolicy = null;
+
+if (INFOTAG) {
+  const G = 1024 * 1024 * 1024;
+  const fmtG = (b) => `${(b / G).toFixed(2)}G`;
+  const fmtDate = (sec) =>
+    new Date(sec * 1000).toISOString().slice(0, 10);
+
+  const allSubs = $substore.read("subs") || [];
+  const lines = [];
+
+  for (const airport of airports) {
+    // ① 缓存
+    let got = scriptResourceCache.get(`${INFOTAG}:${airport}`) || [];
+
+    // ② 响应头兜底
+    if (got.length === 0) {
+      try {
+        const sub = allSubs.find((x) => x.name === airport);
+        const raw =
+          sub && (sub.subUserinfo || (await flowUtils.getFlowHeaders(sub.url)));
+        const info = raw && flowUtils.parseFlowHeaders(raw);
+        // total > 0 挡住「有头但全是 0」的机场，让它退回去用缓存那路
+        if (info && info.total > 0) {
+          const used = (info.usage?.upload || 0) + (info.usage?.download || 0);
+          got = [`已用流量：${fmtG(used)} / ${fmtG(info.total)}`];
+          if (info.expires) {
+            const days = Math.ceil((info.expires * 1000 - Date.now()) / 86400000);
+            got.push(`套餐到期：${fmtDate(info.expires)}`);
+            if (days >= 0) got.push(`剩余天数：${days} 天`);
+          }
+        }
+      } catch (e) {
+        // 取不到就算了，这个组是锦上添花，不能因为它让整份配置产不出来
+      }
+    }
+
+    got.forEach((text) => lines.push(`${airport} ${text}`));
+  }
+
+  if (lines.length) {
+    infoPolicy = new Policy("INFO", "selector");
+    infoPolicy.outbounds.push(...lines);
+  }
+}
+
 let allAutoPolicy = airports.size > 1 ? new Policy("ALL AUTO", "urltest") : null;
 if (allAutoPolicy) {
   allAutoPolicy.outbounds.push(...autoPolicies.map((p) => p.tag));
@@ -278,9 +341,15 @@ let countryPolicies = Array.from(countries, (countryName) => {
 /**
  * 添加策略组到配置
  */
+// INFO 组的成员得有对应的 outbound 才合法，这里按 tag 造出来
+const infoOutbounds = infoPolicy
+  ? infoPolicy.outbounds.map((tag) => ({ type: "direct", tag }))
+  : [];
+
 config.outbounds.push(
   proxyPolicies,
   aiPolicies,
+  ...(infoPolicy ? [infoPolicy, ...infoOutbounds] : []),
   ...(allAutoPolicy ? [allAutoPolicy] : []),
   ...autoPolicies,
   ...(fastPolicy ? [fastPolicy] : []),
