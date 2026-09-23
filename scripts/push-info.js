@@ -33,25 +33,36 @@ if (want) {
   if (missing.length) console.log(`[push-info] subs= 里这些订阅不存在：${missing.join(", ")}`);
 }
 
+// 并行拉。串行的话总时间是各家之和 —— 实测 5 条订阅要 9~13 秒。
+// 并行之后 ≈ 最慢的那一家。每家各一个请求，不会把哪个机场打疼。
+// Promise.all 保序，所以输出顺序仍然跟订阅列表一致。
+const settled = await Promise.all(
+  targets.map(async (name) => {
+    try {
+      // 触发该订阅的操作链，rename.js 跑完会把信息写进缓存。
+      // noCache 必须给：订阅要是开着缓存，这里直接吃缓存、根本不发请求，
+      // 那下面那条「拉取失败」告警就永远不会响，读到的数据也是旧的。
+      await produceArtifact({ type: "subscription", name, noCache: true });
+    } catch (e) {
+      // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样
+      return { name, ok: false };
+    }
+    return { name, ok: true, lines: scriptResourceCache.get(`${TAG}:${name}`) || [] };
+  })
+);
+
 const blocks = [];
 const failed = [];
 
-for (const name of targets) {
-  try {
-    // 触发该订阅的操作链，rename.js 跑完会把信息写进缓存。
-    // noCache 必须给：订阅要是开着缓存，这里直接吃缓存、根本不发请求，
-    // 那下面那条「拉取失败」告警就永远不会响，读到的数据也是旧的。
-    await produceArtifact({ type: "subscription", name, noCache: true });
-  } catch (e) {
-    // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样
-    failed.push(name);
-    continue;
+for (const r of settled) {
+  if (!r.ok) {
+    failed.push(r.name);
+  } else if (r.lines.length) {
+    // 机场名单独提一行，省掉每行都重复一遍。各机场的文案是它自己写的公告原文，
+    // 格式各不相同（「剩余流量」「距离下次重置剩余」「上次更新」…），
+    // 不去解析统一成表格 —— 机场改一个字就会解析错或漏掉。
+    blocks.push(`【${r.name}】\n${r.lines.join("\n")}`);
   }
-  const got = scriptResourceCache.get(`${TAG}:${name}`) || [];
-  // 机场名单独提一行，省掉每行都重复一遍。各机场的文案是它自己写的公告原文，
-  // 格式各不相同（「剩余流量」「距离下次重置剩余」「上次更新」…），
-  // 不去解析统一成表格 —— 机场改一个字就会解析错或漏掉。
-  if (got.length) blocks.push(`【${name}】\n${got.join("\n")}`);
 }
 
 const alerts = failed.map((name) => `⚠️ ${name} 订阅拉取失败`);
