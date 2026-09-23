@@ -167,7 +167,7 @@ function ObjKA(i) {
   AMK = Object.entries(i)
 }
 
-function operator(pro, targetPlatform, context) {
+async function operator(pro, targetPlatform, context) {
   // 没手写 name= 时，自动取当前订阅的名字当前缀。
   // Sub-Store 把来源挂在第三个参数 context.source 上，键就是订阅名：
   //   单独拉订阅            { "deg": {…} }
@@ -347,15 +347,46 @@ function operator(pro, targetPlatform, context) {
   if (INFOTAG) {
     const subName = pro[0]?._subName;
     if (subName) {
-      scriptResourceCache.set(
-        `${INFOTAG}:${subName}`,
-        infoNames,
-        24 * 3600 * 1000
-      );
+      const lines = infoNames.length
+        ? infoNames
+        : await infoFromHeaders(subName);
+      scriptResourceCache.set(`${INFOTAG}:${subName}`, lines, 24 * 3600 * 1000);
     }
   }
 
   return pro;
+}
+
+// 机场报流量有两种方式：把信息塞成假节点（上面那条路，靠「认不出地区」捞出来），
+// 或者写在订阅响应头的 subscription-userinfo 里。这里管后者。
+//
+// 两种都在 rename 里采集、写进同一个缓存键，是为了让缓存成为唯一的数据源：
+// 消费方（sing-box-col.js、push-info.js）只管读，不用各自再解析一遍响应头。
+// 采集放这儿而不是消费方，是因为假节点那条路只有 rename 认得 —— 它判断
+// 「这名字不属于任何地区」是做本职工作的副产品，链路上没有第二个地方有这个能力。
+async function infoFromHeaders(subName) {
+  const G = 1024 * 1024 * 1024;
+  const fmtG = (b) => `${(b / G).toFixed(2)}G`;
+  try {
+    const sub = ($substore.read("subs") || []).find((x) => x.name === subName);
+    if (!sub) return [];
+    // subUserinfo 是 Sub-Store 上次拉订阅时存下来的；没有才现去请求一次。
+    const raw = sub.subUserinfo || (await flowUtils.getFlowHeaders(sub.url));
+    const info = raw && flowUtils.parseFlowHeaders(raw);
+    if (!info || !(info.total > 0)) return [];
+    const used = (info.usage?.upload || 0) + (info.usage?.download || 0);
+    const lines = [`已用流量：${fmtG(used)} / ${fmtG(info.total)}`];
+    if (info.expires) {
+      const ms = info.expires * 1000;
+      lines.push(`套餐到期：${new Date(ms).toISOString().slice(0, 10)}`);
+      const days = Math.ceil((ms - Date.now()) / 86400000);
+      if (days >= 0) lines.push(`剩余天数：${days} 天`);
+    }
+    return lines;
+  } catch (e) {
+    // 机场超时／限流都不该让整条订阅产出失败，静默降级成「这个机场没信息」。
+    return [];
+  }
 }
 
 // prettier-ignore

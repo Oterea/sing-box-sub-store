@@ -223,10 +223,18 @@ sing-box-col.js  …&infotag=___INFO___
 
 机场给流量信息有两种方式，这里都支持：
 
-| 方式 | 谁给的 | 怎么取 |
+| 方式 | 谁给的 | 长什么样 |
 |---|---|---|
-| **订阅响应头** | 多数机场。`subscription-userinfo: upload=…; download=…; total=…; expire=…` | `sing-box-col.js` 直接读 |
-| **假节点** | 少数机场。往节点列表里塞几个名字是公告的节点 | `rename.js` 收集，见下 |
+| **假节点** | 少数机场。往节点列表里塞几个名字是公告的节点 | `剩余流量：78.29 GB` |
+| **订阅响应头** | 多数机场 | `subscription-userinfo: upload=…; download=…; total=…; expire=…` |
+
+**两种都由 `rename.js` 采集，写进同一个缓存键 `<infotag>:<订阅名>`。**
+`sing-box-col.js` 只负责读缓存、拼成 INFO 组，自己不解析任何东西。
+
+采集集中在 `rename.js` 是因为假节点那条路**只有它认得** —— 判断「这名字不属于
+任何地区」是它做本职工作的副产品，整条链路上没有第二个地方有这个能力。而响应头
+那条路本来在哪都能读，把它也挪进来，是为了让缓存成为**唯一的数据源**：多一个
+消费方（比如下面的 `push-info.js`）就不用把解析逻辑再抄一遍。
 
 顺序是**假节点优先、响应头兜底**。因为有的机场两样都给，但响应头里全是 0
 （`upload=0; download=0; total=0`）—— 先读头会显示成 0。代码里用 `total > 0` 挡住这种。
@@ -243,9 +251,8 @@ Useless Filter → rename.js → Flag Operator → Region Filter
 其中 **Region Filter 按地区白名单保留**，而公告节点的 `getFlag` 返回的是
 🏳️‍🌈 或 🏴‍☠️，不在任何地区里，**必被剔除且没有放行选项**。这条路走不通。
 
-所以改成：`rename.js` 在丢弃它们之前，把**原始名字**写进 Sub-Store 的脚本缓存
-（键是 `<infotag>:<订阅名>`），`sing-box-col.js` 直接从缓存取。信息根本不进节点流，
-四道关卡一道都碰不到。
+所以改成：`rename.js` 在丢弃它们之前，把**原始名字**写进 Sub-Store 的脚本缓存，
+消费方直接从缓存取。信息根本不进节点流，四道关卡一道都碰不到。
 
 `INFO` 组的成员是现造的 `direct` 类型出站——信息节点不是用来连的，万一误选也只是
 直连。而且这个组**不放进 `proxy`**，日常切节点碰不到它。
@@ -262,6 +269,81 @@ INFO 组。
 rename 就收集不到了。
 
 其余操作（Flag Operator、Region Filter）一个字都不用改。
+
+## 推送到手机（push-info.js）
+
+INFO 组要打开面板才看得到。想让它主动推到手机上，用 `scripts/push-info.js`。
+推送本身不需要任何环境变量 —— Bark 的地址是脚本参数。只有「定时」需要一个
+触发器，环境变量只是其中一种办法（见下）。
+
+**1. 建文件**：Sub-Store → 文件 → 新建，类型选「本地文件」，脚本填
+
+```
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/push-info.js#bark=<你的 Bark key>&infotag=___INFO___
+```
+
+`infotag` 必须和 `rename.js` 里填的一致。假设这个文件叫 `push-info`。
+
+**2. 触发**：任何一次「产出这个文件」都会跑一遍脚本、推一次。所以定时的办法不止一种：
+
+| 办法 | 要重启容器 | 说明 |
+|---|---|---|
+| 面板里点一下「预览」 | 否 | 手动推一次，先用这个验证通不通 |
+| 服务器 crontab + curl | 否 | `curl -s "http://127.0.0.1:3001/<后端路径>/api/file/push-info" > /dev/null` |
+| `SUB_STORE_PRODUCE_CRON` | **是** | Sub-Store 自带，不用碰系统 crontab |
+
+用环境变量的话（8 小时一次）：
+
+```
+SUB_STORE_PRODUCE_CRON="0 */8 * * *,file,push-info"
+```
+
+格式是 `cron表达式,类型,名字`，多条用 `;` 分隔。
+
+> **cron 表达式里不能带逗号。** 源码是 `t.split(/\s*,\s*/)` 按逗号切三段，
+> 写成 `0 0,8,16 * * *,file,push-info` 会被切成五段直接废掉。要么用 `*/8`，
+> 要么写三条用 `;` 分开。
+
+推送长这样：
+
+```
+机场流量
+dead ⚠️ 订阅拉取失败
+tolink 剩余流量：78.29 GB
+tolink 套餐到期：2026-10-17
+pei 已用流量：2.87G / 100.00G
+pei 剩余天数：13 天
+```
+
+第一行那种告警是 `produceArtifact` 抛异常来的 —— **机场跑路、换域名、被墙都长这样**，
+比流量数字更值得看一眼。
+
+> 脚本对每条订阅都传了 `noCache: true`。Sub-Store 默认会把拉回来的订阅内容
+> 缓存 1 小时（`resourceCacheTtl`，不设就是 1 小时）。推送间隔比它长的话本来就
+> 会真去拉，但万一推送时刻正好落在客户端刚拉过订阅的那 1 小时内，就会吃到缓存 ——
+> 流量是旧的，机场挂了也发现不了。`noCache` 把这个时间窗口去掉。
+>
+> 代价是每次推送都真去各机场拉一遍：8 小时一次 = 每个机场每天多 3 次请求。
+> 嫌多就改 12 小时，或用 `subs=` 只推关键的几个。
+
+### 它不依赖 INFO 组
+
+`push-info.js` 自己 `produceArtifact({type:'subscription'})` 跑一遍每条订阅，
+让 `rename.js` 刷新缓存，然后读缓存。所以：
+
+- 不需要 `sing-box-col.js` 带 `infotag`，也不需要面板上真有 INFO 组
+- 不用为了取几行文字去产出一整份配置
+- 推送的数据是**当场刷新**的，不是上次产配置时的旧值
+
+### 可选参数
+
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `bark=` | 必填 | Bark 的 key，或完整推送 URL（自建时用） |
+| `infotag=` | 必填 | 和 `rename.js` 一致 |
+| `subs=a,b` | 全部订阅 | 只推指定的几条 |
+| `title=` | `机场流量` | 通知标题 |
+| `group=` | `SubStore` | Bark 分组 |
 
 ## 组合订阅
 
@@ -282,9 +364,10 @@ outbound tag 不报错，后面的会静默覆盖前面的，等于悄悄少了�
 
 | 脚本 | 作用 | 来源 |
 |---|---|---|
-| `rename.js` | 节点重命名 | 来自 [Keywos/rule](https://github.com/Keywos/rule)，有两处改动：`name` 不填时自动取订阅名、`out` 默认改成 `quan` |
+| `rename.js` | 节点重命名 **+ 采集机场流量信息** | 来自 [Keywos/rule](https://github.com/Keywos/rule)，改动：`name` 不填时自动取订阅名、`out` 默认改成 `quan`、地区表补到 249 国、`infotag` 采集 |
 | `sing-box-col.js` | 把节点装进模板，生成策略组 | 本仓库 |
-| `node_info.js` | 把订阅流量/到期信息做成一个节点 | 来自 [xream/scripts](https://github.com/xream/scripts) 的 `sub-info/node.js` |
+| `push-info.js` | 把机场流量/到期推送到 Bark | 本仓库 |
+| `node_info.js` | 把订阅流量/到期信息做成一个节点 | 来自 [xream/scripts](https://github.com/xream/scripts) 的 `sub-info/node.js`。**已被 INFO 组取代**，留着备查 |
 
 ## templates
 
