@@ -36,8 +36,10 @@ if (want) {
 // 并行拉。串行的话总时间是各家之和 —— 实测 5 条订阅要 9~13 秒。
 // 并行之后 ≈ 最慢的那一家。每家各一个请求，不会把哪个机场打疼。
 // Promise.all 保序，所以输出顺序仍然跟订阅列表一致。
+const t0 = Date.now();
 const settled = await Promise.all(
   targets.map(async (name) => {
+    const t = Date.now();
     try {
       // 触发该订阅的操作链，rename.js 跑完会把信息写进缓存。
       // noCache 必须给：订阅要是开着缓存，这里直接吃缓存、根本不发请求，
@@ -45,28 +47,37 @@ const settled = await Promise.all(
       await produceArtifact({ type: "subscription", name, noCache: true });
     } catch (e) {
       // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样
-      return { name, ok: false };
+      return { name, ok: false, ms: Date.now() - t };
     }
-    return { name, ok: true, lines: scriptResourceCache.get(`${TAG}:${name}`) || [] };
+    return {
+      name,
+      ok: true,
+      ms: Date.now() - t,
+      lines: scriptResourceCache.get(`${TAG}:${name}`) || [],
+    };
   })
 );
+const totalMs = Date.now() - t0;
+const sec = (ms) => `${(ms / 1000).toFixed(1)}s`;
 
 const blocks = [];
 const failed = [];
 
 for (const r of settled) {
   if (!r.ok) {
-    failed.push(r.name);
+    // 带上耗时：20 秒那种是超时（Sub-Store 单条订阅超时就是 20 秒），
+    // 零点几秒那种是连不上或被拒，两者的排查方向完全不同。
+    failed.push(`⚠️ ${r.name} 订阅拉取失败（${sec(r.ms)}）`);
   } else if (r.lines.length) {
     // 机场名单独提一行，省掉每行都重复一遍。各机场的文案是它自己写的公告原文，
     // 格式各不相同（「剩余流量」「距离下次重置剩余」「上次更新」…），
     // 不去解析统一成表格 —— 机场改一个字就会解析错或漏掉。
-    blocks.push(`【${r.name}】\n${r.lines.join("\n")}`);
+    blocks.push(`【${r.name}】 ${sec(r.ms)}\n${r.lines.join("\n")}`);
   }
 }
 
-const alerts = failed.map((name) => `⚠️ ${name} 订阅拉取失败`);
-const body = [alerts.join("\n"), ...blocks].filter(Boolean).join("\n\n");
+// 各家是并行拉的，所以总耗时 ≈ 最慢的那一家，不是各家之和
+const body = [failed.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
 let result;
 
@@ -85,6 +96,7 @@ if (!body) {
       subtitle: [
         `${blocks.length} 个机场`,
         failed.length ? `${failed.length} 个失败` : "",
+        `共 ${sec(totalMs)}`,
         new Date().toTimeString().slice(0, 5), // 跟随容器时区
       ]
         .filter(Boolean)
@@ -104,6 +116,9 @@ if (!body) {
 
 // 产出内容 = 一行结果 + 完整信息。浏览器里点开这个地址（或加到手机主屏幕
 // 当按钮）就能直接看到数据，不用切到 Bark 去确认。
-$content = [`${result} · ${new Date().toLocaleString("zh-CN")}`, "", body, ""].join(
-  "\n"
-);
+$content = [
+  `${result} · 共 ${sec(totalMs)} · ${new Date().toLocaleString("zh-CN")}`,
+  "",
+  body,
+  "",
+].join("\n");
