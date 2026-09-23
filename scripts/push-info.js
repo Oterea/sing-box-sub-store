@@ -57,18 +57,11 @@ for (const name of targets) {
 const alerts = failed.map((name) => `⚠️ ${name} 订阅拉取失败`);
 const body = [alerts.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
-// 只看不推：地址后面加 ?peek=1。想随手看一眼流量、又不想吵手机时用。
-// $options 来自请求的 query，定时任务产出时它是 undefined，所以要可选链。
-const peek = $options?.peek || $options?._req?.query?.peek;
-
 let result;
 
 if (!body) {
   result = "没有任何可推送的信息";
   console.log(`[push-info] ${result}，跳过`);
-} else if (peek) {
-  result = "仅查看，未推送";
-  console.log(`[push-info] ${result}`);
 } else {
   const endpoint = /^https?:\/\//.test(bark)
     ? bark.replace(/\/+$/, "")
