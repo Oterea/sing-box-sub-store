@@ -2,8 +2,10 @@
 //
 // 用法：Sub-Store → 文件 → 新建 → 类型「本地文件」，脚本填本文件的 raw 地址，
 // 参数：#bark=<key 或完整 URL>&infotag=___INFO___
-// 定时：给 Sub-Store 容器加环境变量（8 小时一次）
-//   SUB_STORE_PRODUCE_CRON="0 */8 * * *,file,<这个文件的名字>"
+// 定时：给 Sub-Store 容器加环境变量，格式 cron,类型,名字，多条用 ; 分隔
+//   SUB_STORE_PRODUCE_CRON="0 14 * * *,file,push-info;0 20 * * *,file,push-info"
+//   cron 表达式里不能带逗号 —— 源码是按逗号切三段的，写成
+//   "0 14,20 * * *,file,push-info" 会被切成五段直接废掉，只能用 ; 分成两条
 //
 // 数据来自 rename.js 写的缓存，键是 <infotag>:<订阅名>。
 // 本脚本先产出一遍订阅触发 rename 重跑刷新缓存，再读。
@@ -41,6 +43,8 @@ const GROUP = group ? decodeURI(group) : "SubStore";
 
 // 一条机场信息发一条 Bark。Bark 的 group 参数会把它们收在同一个分组里，
 // 通知中心是折叠的。机场名当标题，扫一眼就知道是谁。
+// 返回 Bark 的状态码，0 表示请求根本没发出去。调用处必须接住 ——
+// 不接的话 Bark 挂了你也看不出来，页面还是会写「已推送 N 个机场」。
 async function push(title, text) {
   try {
     const res = await $substore.http.post({
@@ -49,10 +53,13 @@ async function push(title, text) {
       body: JSON.stringify({ title, body: text, group: GROUP }),
       timeout: 10000,
     });
-    return res.statusCode === 200;
+    if (res.statusCode !== 200) {
+      console.log(`[push-info] 推送 ${title} 失败：Bark 返回 ${res.statusCode}`);
+    }
+    return res.statusCode;
   } catch (e) {
     console.log(`[push-info] 推送 ${title} 失败：${e.message ?? e}`);
-    return false;
+    return 0;
   }
 }
 
@@ -74,16 +81,18 @@ const settled = await Promise.all(
       // 耗时一起带上：20 秒那种是超时（Sub-Store 单条订阅超时就是 20 秒），
       // 零点几秒那种是连不上或被拒，两者的排查方向完全不同。
       const ms = Date.now() - t;
-      await push(`⚠️ ${name} · ${sec(ms)}`, "订阅拉取失败");
-      return { name, ok: false, ms };
+      const sent = await push(`⚠️ ${name} · ${sec(ms)}`, "订阅拉取失败");
+      return { name, ok: false, ms, sent };
     }
     const ms = Date.now() - t;
     // 各机场的文案是它自己写的公告原文，格式各不相同（「剩余流量」
     // 「距离下次重置剩余」「上次更新」…），不去解析统一成表格 ——
     // 机场改一个字就会解析错或漏掉。
     const lines = scriptResourceCache.get(`${TAG}:${name}`) || [];
-    if (lines.length) await push(`${name} · ${sec(ms)}`, lines.join("\n"));
-    return { name, ok: true, ms, lines };
+    const sent = lines.length
+      ? await push(`${name} · ${sec(ms)}`, lines.join("\n"))
+      : undefined;
+    return { name, ok: true, ms, lines, sent };
   })
 );
 const totalMs = Date.now() - t0;
@@ -100,10 +109,22 @@ for (const r of settled) {
 }
 const body = [failed.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
-const result = body
-  ? `已推送 ${blocks.length} 个机场` +
-    (failed.length ? ` + ${failed.length} 条告警` : "")
-  : "没有任何可推送的信息";
+// sent 为 undefined = 这条压根没推（该机场没信息），不算失败
+const bad = settled.filter((r) => r.sent !== undefined && r.sent !== 200);
+
+const attempted = settled.filter((r) => r.sent !== undefined).length;
+
+let result;
+if (!body) {
+  result = "没有任何可推送的信息";
+} else if (!bad.length) {
+  result =
+    `已推送 ${blocks.length} 个机场` +
+    (failed.length ? ` + ${failed.length} 条告警` : "");
+} else {
+  const codes = [...new Set(bad.map((r) => r.sent || "无响应"))].join(" / ");
+  result = `${attempted - bad.length}/${attempted} 条推送成功（失败的 Bark 返回 ${codes}）`;
+}
 console.log(`[push-info] ${result}，共 ${sec(totalMs)}`);
 
 // 产出内容 = 一行结果 + 完整信息。浏览器里点开这个地址（或加到手机主屏幕
