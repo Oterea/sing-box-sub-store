@@ -57,8 +57,14 @@ for (const name of targets) {
 const alerts = failed.map((name) => `⚠️ ${name} 订阅拉取失败`);
 const body = [alerts.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
+// 产出的内容就是这次的结果。这个「文件」本身没人当配置用，它存在的意义就是
+// 「被产出一次 = 推一次」—— 所以拿它回显结果：浏览器里点开这个文件的地址
+// （或加到 iOS 主屏幕当按钮）能直接看到推送成功没有。
+let result;
+
 if (!body) {
-  console.log("[push-info] 没有任何可推送的信息，跳过");
+  result = "没有任何可推送的信息，跳过";
+  console.log(`[push-info] ${result}`);
 } else {
   const endpoint = /^https?:\/\//.test(bark)
     ? bark.replace(/\/+$/, "")
@@ -80,9 +86,12 @@ if (!body) {
     }),
     timeout: 10000,
   });
-  console.log(
-    `[push-info] 已推送 ${failed.length} 条告警 + ${blocks.length} 个机场，Bark 返回 ${res.statusCode}`
-  );
+  result =
+    res.statusCode === 200
+      ? `已推送 ${blocks.length} 个机场` +
+        (failed.length ? ` + ${failed.length} 条告警` : "")
+      : `推送失败，Bark 返回 ${res.statusCode}`;
+  console.log(`[push-info] ${result}`);
 }
 
-$content = "";
+$content = `${result}\n${new Date().toLocaleString("zh-CN")}\n`;

@@ -289,6 +289,7 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/push-in
 | 办法 | 要重启容器 | 说明 |
 |---|---|---|
 | 面板里点一下「预览」 | 否 | 手动推一次，先用这个验证通不通 |
+| **手机上点一个图标** | 否 | 见下面「做成手机上的按钮」 |
 | 服务器 crontab + curl | 否 | `curl -s "http://127.0.0.1:3001/<后端路径>/api/file/push-info" > /dev/null` |
 | `SUB_STORE_PRODUCE_CRON` | **是** | Sub-Store 自带，不用碰系统 crontab |
 
@@ -340,6 +341,28 @@ SUB_STORE_PRODUCE_CRON="0 */8 * * *,file,push-info"
 >
 > 代价是每次推送都真去各机场拉一遍：8 小时一次 = 每个机场每天多 3 次请求。
 > 嫌多就改 12 小时，或用 `subs=` 只推关键的几个。
+
+### 做成手机上的按钮
+
+**访问这个文件的产出地址 = 推一次。** 如果你的 Sub-Store 后端有域名：
+
+```
+https://<你的域名>/<后端路径>/api/file/push-info
+```
+
+Safari 打开 → 分享 → 「添加到主屏幕」，就是一个点一下就推送的图标。
+用 iOS 快捷指令做一个「获取 URL 内容」动作也行，可以放进桌面小组件。
+
+页面上会直接显示这次的结果，不用切到 Bark 去确认：
+
+```
+已推送 4 个机场
+2026/9/23 13:22:57
+```
+
+Bark 没返回 200 的话会显示 `推送失败，Bark 返回 <状态码>`。
+
+> 这个地址带着后端路径，等于你的 Sub-Store 管理入口，**别往外发**。
 
 ### 它不依赖 INFO 组
 
