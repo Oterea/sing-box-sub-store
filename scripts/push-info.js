@@ -57,13 +57,17 @@ for (const name of targets) {
 const alerts = failed.map((name) => `⚠️ ${name} 订阅拉取失败`);
 const body = [alerts.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
-// 产出的内容就是这次的结果。这个「文件」本身没人当配置用，它存在的意义就是
-// 「被产出一次 = 推一次」—— 所以拿它回显结果：浏览器里点开这个文件的地址
-// （或加到 iOS 主屏幕当按钮）能直接看到推送成功没有。
+// 只看不推：地址后面加 ?peek=1。想随手看一眼流量、又不想吵手机时用。
+// $options 来自请求的 query，定时任务产出时它是 undefined，所以要可选链。
+const peek = $options?.peek || $options?._req?.query?.peek;
+
 let result;
 
 if (!body) {
-  result = "没有任何可推送的信息，跳过";
+  result = "没有任何可推送的信息";
+  console.log(`[push-info] ${result}，跳过`);
+} else if (peek) {
+  result = "仅查看，未推送";
   console.log(`[push-info] ${result}`);
 } else {
   const endpoint = /^https?:\/\//.test(bark)
@@ -94,4 +98,8 @@ if (!body) {
   console.log(`[push-info] ${result}`);
 }
 
-$content = `${result}\n${new Date().toLocaleString("zh-CN")}\n`;
+// 产出内容 = 一行结果 + 完整信息。浏览器里点开这个地址（或加到手机主屏幕
+// 当按钮）就能直接看到数据，不用切到 Bark 去确认。
+$content = [`${result} · ${new Date().toLocaleString("zh-CN")}`, "", body, ""].join(
+  "\n"
+);
