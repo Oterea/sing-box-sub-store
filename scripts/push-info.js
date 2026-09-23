@@ -33,7 +33,7 @@ if (want) {
   if (missing.length) console.log(`[push-info] subs= 里这些订阅不存在：${missing.join(", ")}`);
 }
 
-const lines = [];
+const blocks = [];
 const failed = [];
 
 for (const name of targets) {
@@ -44,14 +44,18 @@ for (const name of targets) {
     await produceArtifact({ type: "subscription", name, noCache: true });
   } catch (e) {
     // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样
-    failed.push(`${name} ⚠️ 订阅拉取失败`);
+    failed.push(name);
     continue;
   }
   const got = scriptResourceCache.get(`${TAG}:${name}`) || [];
-  got.forEach((text) => lines.push(`${name} ${text}`));
+  // 机场名单独提一行，省掉每行都重复一遍。各机场的文案是它自己写的公告原文，
+  // 格式各不相同（「剩余流量」「距离下次重置剩余」「上次更新」…），
+  // 不去解析统一成表格 —— 机场改一个字就会解析错或漏掉。
+  if (got.length) blocks.push(`【${name}】\n${got.join("\n")}`);
 }
 
-const body = [...failed, ...lines].join("\n");
+const alerts = failed.map((name) => `⚠️ ${name} 订阅拉取失败`);
+const body = [alerts.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
 if (!body) {
   console.log("[push-info] 没有任何可推送的信息，跳过");
@@ -64,13 +68,20 @@ if (!body) {
     headers: { "Content-Type": "application/json; charset=utf-8" },
     body: JSON.stringify({
       title: title ? decodeURI(title) : "机场流量",
+      subtitle: [
+        `${blocks.length} 个机场`,
+        failed.length ? `${failed.length} 个失败` : "",
+        new Date().toTimeString().slice(0, 5), // 跟随容器时区
+      ]
+        .filter(Boolean)
+        .join(" · "),
       body,
       group: group ? decodeURI(group) : "SubStore",
     }),
     timeout: 10000,
   });
   console.log(
-    `[push-info] 已推送 ${failed.length} 条告警 + ${lines.length} 行信息，Bark 返回 ${res.statusCode}`
+    `[push-info] 已推送 ${failed.length} 条告警 + ${blocks.length} 个机场，Bark 返回 ${res.statusCode}`
   );
 }
 
