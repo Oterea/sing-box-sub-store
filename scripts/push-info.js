@@ -12,10 +12,9 @@
 //
 // 可选参数：
 //   subs=a,b    只推这几个订阅，默认全部
-//   title=      通知标题，默认「机场流量」
-//   group=      Bark 分组，默认 SubStore
+//   group=      Bark 分组，默认 SubStore（一条机场一条通知，靠它折叠在一起）
 
-const { bark, infotag, title, group, subs } = $arguments;
+const { bark, infotag, group, subs } = $arguments;
 if (!bark) throw new Error("缺少参数 bark=<key 或完整 URL>");
 if (!infotag) throw new Error("缺少参数 infotag=<要和 rename.js 里填的一致>");
 
@@ -33,9 +32,34 @@ if (want) {
   if (missing.length) console.log(`[push-info] subs= 里这些订阅不存在：${missing.join(", ")}`);
 }
 
-// 并行拉。串行的话总时间是各家之和 —— 实测 5 条订阅要 9~13 秒。
-// 并行之后 ≈ 最慢的那一家。每家各一个请求，不会把哪个机场打疼。
-// Promise.all 保序，所以输出顺序仍然跟订阅列表一致。
+const sec = (ms) => `${(ms / 1000).toFixed(1)}s`;
+
+const endpoint = /^https?:\/\//.test(bark)
+  ? bark.replace(/\/+$/, "")
+  : `https://api.day.app/${bark}`;
+const GROUP = group ? decodeURI(group) : "SubStore";
+
+// 一条机场信息发一条 Bark。Bark 的 group 参数会把它们收在同一个分组里，
+// 通知中心是折叠的。机场名当标题，扫一眼就知道是谁。
+async function push(title, text) {
+  try {
+    const res = await $substore.http.post({
+      url: endpoint,
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ title, body: text, group: GROUP }),
+      timeout: 10000,
+    });
+    return res.statusCode === 200;
+  } catch (e) {
+    console.log(`[push-info] 推送 ${title} 失败：${e.message ?? e}`);
+    return false;
+  }
+}
+
+// 并行拉，而且**谁先回来谁先推**，不等最慢的那一家。
+// 代价是通知条数等于机场数、到达顺序不固定 —— 换来的是第一条几乎立刻就到。
+// 注意网页（和快捷指令）仍然要等全部跑完：HTTP 响应没法流式返回，
+// $content 是脚本 return 时一次性给出去的。
 const t0 = Date.now();
 const settled = await Promise.all(
   targets.map(async (name) => {
@@ -43,76 +67,44 @@ const settled = await Promise.all(
     try {
       // 触发该订阅的操作链，rename.js 跑完会把信息写进缓存。
       // noCache 必须给：订阅要是开着缓存，这里直接吃缓存、根本不发请求，
-      // 那下面那条「拉取失败」告警就永远不会响，读到的数据也是旧的。
+      // 那「拉取失败」告警就永远不会响，读到的数据也是旧的。
       await produceArtifact({ type: "subscription", name, noCache: true });
     } catch (e) {
-      // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样
-      return { name, ok: false, ms: Date.now() - t };
+      // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样。
+      // 耗时一起带上：20 秒那种是超时（Sub-Store 单条订阅超时就是 20 秒），
+      // 零点几秒那种是连不上或被拒，两者的排查方向完全不同。
+      const ms = Date.now() - t;
+      await push(`⚠️ ${name} · ${sec(ms)}`, "订阅拉取失败");
+      return { name, ok: false, ms };
     }
-    return {
-      name,
-      ok: true,
-      ms: Date.now() - t,
-      lines: scriptResourceCache.get(`${TAG}:${name}`) || [],
-    };
+    const ms = Date.now() - t;
+    // 各机场的文案是它自己写的公告原文，格式各不相同（「剩余流量」
+    // 「距离下次重置剩余」「上次更新」…），不去解析统一成表格 ——
+    // 机场改一个字就会解析错或漏掉。
+    const lines = scriptResourceCache.get(`${TAG}:${name}`) || [];
+    if (lines.length) await push(`${name} · ${sec(ms)}`, lines.join("\n"));
+    return { name, ok: true, ms, lines };
   })
 );
 const totalMs = Date.now() - t0;
-const sec = (ms) => `${(ms / 1000).toFixed(1)}s`;
 
+// 网页上仍然给一份完整的，顺序按订阅列表固定，跟通知的到达顺序无关
 const blocks = [];
 const failed = [];
-
 for (const r of settled) {
   if (!r.ok) {
-    // 带上耗时：20 秒那种是超时（Sub-Store 单条订阅超时就是 20 秒），
-    // 零点几秒那种是连不上或被拒，两者的排查方向完全不同。
     failed.push(`⚠️ ${r.name} 订阅拉取失败（${sec(r.ms)}）`);
   } else if (r.lines.length) {
-    // 机场名单独提一行，省掉每行都重复一遍。各机场的文案是它自己写的公告原文，
-    // 格式各不相同（「剩余流量」「距离下次重置剩余」「上次更新」…），
-    // 不去解析统一成表格 —— 机场改一个字就会解析错或漏掉。
     blocks.push(`【${r.name}】 ${sec(r.ms)}\n${r.lines.join("\n")}`);
   }
 }
-
-// 各家是并行拉的，所以总耗时 ≈ 最慢的那一家，不是各家之和
 const body = [failed.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
-let result;
-
-if (!body) {
-  result = "没有任何可推送的信息";
-  console.log(`[push-info] ${result}，跳过`);
-} else {
-  const endpoint = /^https?:\/\//.test(bark)
-    ? bark.replace(/\/+$/, "")
-    : `https://api.day.app/${bark}`;
-  const res = await $substore.http.post({
-    url: endpoint,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify({
-      title: title ? decodeURI(title) : "机场流量",
-      subtitle: [
-        `${blocks.length} 个机场`,
-        failed.length ? `${failed.length} 个失败` : "",
-        `共 ${sec(totalMs)}`,
-        new Date().toTimeString().slice(0, 5), // 跟随容器时区
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      body,
-      group: group ? decodeURI(group) : "SubStore",
-    }),
-    timeout: 10000,
-  });
-  result =
-    res.statusCode === 200
-      ? `已推送 ${blocks.length} 个机场` +
-        (failed.length ? ` + ${failed.length} 条告警` : "")
-      : `推送失败，Bark 返回 ${res.statusCode}`;
-  console.log(`[push-info] ${result}`);
-}
+const result = body
+  ? `已推送 ${blocks.length} 个机场` +
+    (failed.length ? ` + ${failed.length} 条告警` : "")
+  : "没有任何可推送的信息";
+console.log(`[push-info] ${result}，共 ${sec(totalMs)}`);
 
 // 产出内容 = 一行结果 + 完整信息。浏览器里点开这个地址（或加到手机主屏幕
 // 当按钮）就能直接看到数据，不用切到 Bark 去确认。
