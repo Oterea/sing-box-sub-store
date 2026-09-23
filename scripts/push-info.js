@@ -67,32 +67,51 @@ async function push(title, text) {
 // 代价是通知条数等于机场数、到达顺序不固定 —— 换来的是第一条几乎立刻就到。
 // 注意网页（和快捷指令）仍然要等全部跑完：HTTP 响应没法流式返回，
 // $content 是脚本 return 时一次性给出去的。
-const t0 = Date.now();
-const settled = await Promise.all(
-  targets.map(async (name) => {
-    const t = Date.now();
+const MAX_TRIES = 3;
+
+// 拉失败就重试，最多 MAX_TRIES 次。中间那几次失败不推送 —— 一个抖动的机场
+// 否则能连刷三条。只在最终成功或最终失败时推一条。
+// ms 算的是从第一次尝试到出结果的总时间，也就是你实际等了多久。
+async function fetchSub(name) {
+  const t = Date.now();
+  for (let tries = 1; tries <= MAX_TRIES; tries++) {
     try {
       // 触发该订阅的操作链，rename.js 跑完会把信息写进缓存。
       // noCache 必须给：订阅要是开着缓存，这里直接吃缓存、根本不发请求，
       // 那「拉取失败」告警就永远不会响，读到的数据也是旧的。
       await produceArtifact({ type: "subscription", name, noCache: true });
+      return { ok: true, tries, ms: Date.now() - t };
     } catch (e) {
-      // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样。
-      // 耗时一起带上：20 秒那种是超时（Sub-Store 单条订阅超时就是 20 秒），
-      // 零点几秒那种是连不上或被拒，两者的排查方向完全不同。
-      const ms = Date.now() - t;
-      const sent = await push(`⚠️ ${name} · ${sec(ms)}`, "订阅拉取失败");
-      return { name, ok: false, ms, sent };
+      console.log(`[push-info] ${name} 第 ${tries} 次拉取失败：${e.message ?? e}`);
+      if (tries === MAX_TRIES) return { ok: false, tries, ms: Date.now() - t };
     }
-    const ms = Date.now() - t;
+  }
+}
+
+const t0 = Date.now();
+const settled = await Promise.all(
+  targets.map(async (name) => {
+    const r = await fetchSub(name);
+    if (!r.ok) {
+      // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样。
+      // 耗时一起带上：20 秒一次那种是超时（Sub-Store 单条订阅超时就是
+      // 20 秒），零点几秒那种是连不上或被拒，两者排查方向完全不同。
+      const sent = await push(
+        `⚠️ ${name} · ${sec(r.ms)}`,
+        `订阅拉取失败（试了 ${r.tries} 次）`
+      );
+      return { name, ok: false, ms: r.ms, tries: r.tries, sent };
+    }
+    // 一次就成功的不提重试，免得每条通知都带一段废话
+    const retry = r.tries > 1 ? ` · 重试 ${r.tries - 1} 次` : "";
     // 各机场的文案是它自己写的公告原文，格式各不相同（「剩余流量」
     // 「距离下次重置剩余」「上次更新」…），不去解析统一成表格 ——
     // 机场改一个字就会解析错或漏掉。
     const lines = scriptResourceCache.get(`${TAG}:${name}`) || [];
     const sent = lines.length
-      ? await push(`${name} · ${sec(ms)}`, lines.join("\n"))
+      ? await push(`${name} · ${sec(r.ms)}${retry}`, lines.join("\n"))
       : undefined;
-    return { name, ok: true, ms, lines, sent };
+    return { name, ok: true, ms: r.ms, tries: r.tries, lines, sent };
   })
 );
 const totalMs = Date.now() - t0;
@@ -102,9 +121,12 @@ const blocks = [];
 const failed = [];
 for (const r of settled) {
   if (!r.ok) {
-    failed.push(`⚠️ ${r.name} 订阅拉取失败（${sec(r.ms)}）`);
-  } else if (r.lines.length) {
-    blocks.push(`【${r.name}】 ${sec(r.ms)}\n${r.lines.join("\n")}`);
+    failed.push(`⚠️ ${r.name} 订阅拉取失败（试了 ${r.tries} 次，${sec(r.ms)}）`);
+  } else {
+    const retry = r.tries > 1 ? ` 重试 ${r.tries - 1} 次` : "";
+    if (r.lines.length) {
+      blocks.push(`【${r.name}】 ${sec(r.ms)}${retry}\n${r.lines.join("\n")}`);
+    }
   }
 }
 const body = [failed.join("\n"), ...blocks].filter(Boolean).join("\n\n");
