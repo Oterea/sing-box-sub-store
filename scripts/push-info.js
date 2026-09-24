@@ -66,6 +66,15 @@ const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate(
 // （mitch 到期 UTC 2026-10-12 16:00，本地是 2026-10-13）
 const ymdhm = (d) => `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const sec = (ms) => `${(ms / 1000).toFixed(1)}s`;
+// 按自然日算差，跟 Sub-Store 的 remainingDays 同一套口径（它也是比日期不比小时），
+// 这样「重置 N 天后」和「到期 N 天后」在同一天时数字一致，不会一个 18 一个 19
+const daysUntil = (d) => {
+  const a = new Date();
+  a.setHours(0, 0, 0, 0);
+  const b = new Date(d);
+  b.setHours(0, 0, 0, 0);
+  return Math.round((b - a) / 86400000);
+};
 const ago = (ms) => {
   const h = ms / 3600000;
   return h < 48 ? `${h.toFixed(1)} 小时前` : `${(h / 24).toFixed(1)} 天前`;
@@ -141,7 +150,12 @@ function render(name, d) {
     lines.push(`重置 ${ymd(r)}（${d.remainingDays} 天后）`);
   }
   // expires 是秒级时间戳，时分是真实信息（pei 的到期是 16:44），不截掉
-  if (d.expires > 0) lines.push(`到期 ${ymdhm(new Date(d.expires * 1000))}`);
+  if (d.expires > 0) {
+    const e = new Date(d.expires * 1000);
+    const n = daysUntil(e);
+    const tail = n > 0 ? `（${n} 天后）` : n === 0 ? "（今天）" : `（已过期 ${-n} 天）`;
+    lines.push(`到期 ${ymdhm(e)}${tail}`);
+  }
 
   return lines;
 }
@@ -203,7 +217,7 @@ for (const r of settled) {
     failed.push(`⚠️ ${r.name} ${r.code}（试了 ${r.tries} 次，${sec(r.ms)}）`);
   } else {
     const retry = r.tries > 1 ? ` 重试 ${r.tries - 1} 次` : "";
-    blocks.push(`【${r.name}】 ${sec(r.ms)}${retry}\n${r.lines.join("\n")}`);
+    blocks.push(`# ${r.name} # ${sec(r.ms)}${retry}\n${r.lines.join("\n")}`);
   }
 }
 const body = [failed.join("\n"), ...blocks].filter(Boolean).join("\n\n");
