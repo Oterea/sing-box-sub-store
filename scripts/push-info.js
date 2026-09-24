@@ -114,7 +114,9 @@ function withDelta(name, lines) {
   }
   // prev 不存在时不写这行 —— 第一次跑没得比，硬凑一句只会占地方
 
-  if (hit && isScheduled) {
+  // 基准不存在时任何一次跑都建，否则从来不用定时的人永远看不到差值。
+  // 已经有基准了就只让定时那次更新。
+  if (hit && (isScheduled || !prev)) {
     scriptResourceCache.set(
       key,
       { gb: hit.gb, ts: Date.now() },
