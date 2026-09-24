@@ -37,6 +37,9 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const isScheduled = $options === undefined;
 
 const MAX_TRIES = 3;
+// 这些错误重试没有意义：订阅名不存在，试一百次也还是不存在。
+// NO_FLOW_INFO 不在里面 —— 限流、网络抖动有可能自愈，值得再试。
+const NO_RETRY = ["RESOURCE_NOT_FOUND"];
 const BASELINE_TTL = 30 * 24 * 3600 * 1000;
 
 const known = ($substore.read("subs") || []).map((s) => s.name);
@@ -118,7 +121,17 @@ function delta(label, key, used) {
     : `${label} 消耗 ${size(diff)}（${gap}）`;
 }
 
-// ── 拼成一条机场的内容 ────────────────────────────────────
+// 记下这次的读数当基准。跟 render 分开 —— render 只拼字符串，
+// 混在一起的话谁要是为别的目的再调一次 render，基准就被多写一次，差值直接错乱。
+// 必须在 render 之后调：差值是拿新读数跟旧基准比的。
+function record(name, used) {
+  const now = Date.now();
+  scriptResourceCache.set(`push-info:last:${name}`, { used, ts: now }, BASELINE_TTL);
+  if (isScheduled)
+    scriptResourceCache.set(`push-info:cron:${name}`, { used, ts: now }, BASELINE_TTL);
+}
+
+// ── 拼成一条机场的内容（纯函数，不碰缓存）────────────────
 function render(name, d) {
   const used = (d.usage?.upload || 0) + (d.usage?.download || 0);
   const lines = [];
@@ -134,12 +147,6 @@ function render(name, d) {
   const b = delta("较上次定时", `push-info:cron:${name}`, used);
   if (a) lines.push(a);
   if (b) lines.push(b);
-
-  // 基准要在算完差值之后再更新
-  const now = Date.now();
-  scriptResourceCache.set(`push-info:last:${name}`, { used, ts: now }, BASELINE_TTL);
-  if (isScheduled)
-    scriptResourceCache.set(`push-info:cron:${name}`, { used, ts: now }, BASELINE_TTL);
 
   // remainingDays 是「距离下次重置还有几天」，不是到期倒计时。
   // 接口已经用订阅链接上的 #resetDay 算好了，这里只负责显示。
@@ -157,7 +164,7 @@ function render(name, d) {
     lines.push(`到期 ${ymdhm(e)}${tail}`);
   }
 
-  return lines;
+  return { lines, used };
 }
 
 // ── 推送 ──────────────────────────────────────────────────
@@ -168,20 +175,19 @@ const GROUP = group ? decodeURI(group) : "SubStore";
 const TITLE = title ? decodeURI(title) : "机场流量";
 
 // 返回 Bark 的状态码，0 表示请求根本没发出去。调用处必须接住 ——
-// 不接的话 Bark 挂了你也看不出来，页面还是会写「已推送 N 个机场」。
-async function push(title, text) {
+// 不接的话 Bark 挂了你也看不出来，页面还是会写「已推送」。
+// 参数不叫 title：那会遮蔽外层从 $arguments 解构出来的同名变量。
+async function push(text) {
   try {
     const res = await $substore.http.post({
       url: endpoint,
       headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: JSON.stringify({ title, body: text, group: GROUP }),
+      body: JSON.stringify({ title: TITLE, body: text, group: GROUP }),
       timeout: 10000,
     });
-    if (res.statusCode !== 200)
-      console.log(`[push-info] 推送 ${title} 失败：Bark 返回 ${res.statusCode}`);
     return res.statusCode;
   } catch (e) {
-    console.log(`[push-info] 推送 ${title} 失败：${e.message ?? e}`);
+    console.log(`[push-info] 推送失败：${e.message ?? e}`);
     return 0;
   }
 }
@@ -199,13 +205,19 @@ const settled = await Promise.all(
   targets.map(async (name) => {
     const t = Date.now();
     let last;
-    for (let tries = 1; tries <= MAX_TRIES; tries++) {
+    let tries = 0;
+    while (tries < MAX_TRIES) {
+      tries++;
       last = await fetchFlow(name);
-      if (last.ok)
-        return { name, ok: true, ms: Date.now() - t, tries, lines: render(name, last.data) };
+      if (last.ok) {
+        const { lines, used } = render(name, last.data);
+        record(name, used);
+        return { name, ok: true, ms: Date.now() - t, tries, lines };
+      }
       console.log(`[push-info] ${name} 第 ${tries} 次拉取失败：${last.code}`);
+      if (NO_RETRY.includes(last.code)) break;
     }
-    return { name, ok: false, ms: Date.now() - t, tries: MAX_TRIES, code: last.code };
+    return { name, ok: false, ms: Date.now() - t, tries, code: last.code };
   })
 );
 
@@ -214,7 +226,8 @@ const blocks = [];
 const failed = [];
 for (const r of settled) {
   if (!r.ok) {
-    failed.push(`⚠️ ${r.name} ${r.code}（试了 ${r.tries} 次，${sec(r.ms)}）`);
+    const t = r.tries > 1 ? `试了 ${r.tries} 次，` : "";
+    failed.push(`⚠️ ${r.name} ${r.code}（${t}${sec(r.ms)}）`);
   } else {
     const retry = r.tries > 1 ? ` 重试 ${r.tries - 1} 次` : "";
     blocks.push(`# ${r.name} # ${sec(r.ms)}${retry}\n${r.lines.join("\n")}`);
@@ -227,7 +240,7 @@ if (!body) {
   result = "没有任何可推送的信息";
   console.log(`[push-info] ${result}，跳过`);
 } else {
-  const code = await push(TITLE, body);
+  const code = await push(body);
   result = code === 200 ? "已推送" : `推送失败，Bark 返回 ${code || "无响应"}`;
   console.log(`[push-info] ${result}`);
 }
