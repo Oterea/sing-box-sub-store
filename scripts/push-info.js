@@ -1,26 +1,43 @@
 // 把各机场的流量 / 到期信息推送到手机（Bark）
 //
-// 用法：Sub-Store → 文件 → 新建 → 类型「本地文件」，脚本填本文件的 raw 地址，
-// 参数：#bark=<key 或完整 URL>&infotag=___INFO___
+// 用法：Sub-Store → 文件 → 新建 → 源选「本地」内容留空，加一个脚本操作，
+// 地址填本文件，参数 #bark=<key 或完整 URL>
 // 定时：给 Sub-Store 容器加环境变量，格式 cron,类型,名字，多条用 ; 分隔
 //   SUB_STORE_PRODUCE_CRON="0 14 * * *,file,push-info;0 20 * * *,file,push-info"
 //   cron 表达式里不能带逗号 —— 源码是按逗号切三段的，写成
 //   "0 14,20 * * *,file,push-info" 会被切成五段直接废掉，只能用 ; 分成两条
 //
-// 数据来自 rename.js 写的缓存，键是 <infotag>:<订阅名>。
-// 本脚本先产出一遍订阅触发 rename 重跑刷新缓存，再读。
-// 不依赖 sing-box-col.js，也不要求 INFO 组存在 —— 采集只有一处（rename.js），
-// 这里和 col 都只是消费方。
+// 数据直接调 Sub-Store 自己的查流量接口，跟面板用的是同一个：
+//   GET http://127.0.0.1:<后端端口>/api/sub/flow/<订阅名>
+// 所以 flowUserAgent 解析、resetDay 计算、subUserinfo 合并全都复用它的实现，
+// 一行都不用抄。不依赖 rename.js，也不读任何缓存。
 //
 // 可选参数：
 //   subs=a,b    只推这几个订阅，默认全部
 //   group=      Bark 分组，默认 SubStore（一条机场一条通知，靠它折叠在一起）
 
-const { bark, infotag, group, subs } = $arguments;
+const { bark, group, subs } = $arguments;
 if (!bark) throw new Error("缺少参数 bark=<key 或完整 URL>");
-if (!infotag) throw new Error("缺少参数 infotag=<要和 rename.js 里填的一致>");
 
-const TAG = decodeURI(infotag);
+// 后端 API 端口，取值跟 Sub-Store 源码同一行逻辑：
+//   port = process.env.SUB_STORE_BACKEND_API_PORT || 3000
+// 读环境变量而不是让用户传参，是因为参数会跟配置脱节，环境变量就是配置本身。
+// 3000 是不带安全路径的裸 API，只在容器内监听 —— 本脚本正好跑在容器里。
+let PORT = 3000;
+try {
+  PORT = process.env.SUB_STORE_BACKEND_API_PORT || 3000;
+} catch (e) {
+  // 非 Node 环境（Sub-Store 跑在 Loon/QX 里当脚本）没有 process，退回默认值
+}
+const BASE = `http://127.0.0.1:${PORT}`;
+
+// 定时产出时 $options 是 undefined，网页访问时它带着请求信息。
+// 用这个区分「上次」和「上次定时」两个基准该不该更新。
+const isScheduled = $options === undefined;
+
+const MAX_TRIES = 3;
+const BASELINE_TTL = 30 * 24 * 3600 * 1000;
+
 const known = ($substore.read("subs") || []).map((s) => s.name);
 const want = subs
   ? decodeURI(subs)
@@ -31,18 +48,109 @@ const want = subs
 const targets = want ? want.filter((n) => known.includes(n)) : known;
 if (want) {
   const missing = want.filter((n) => !known.includes(n));
-  if (missing.length) console.log(`[push-info] subs= 里这些订阅不存在：${missing.join(", ")}`);
+  if (missing.length)
+    console.log(`[push-info] subs= 里这些订阅不存在：${missing.join(", ")}`);
 }
 
+// ── 格式化 ────────────────────────────────────────────────
+// 字节换算直接用 Sub-Store 自己的函数，输出跟面板逐字一致
+// （100 GB 而不是 100.00 GB，单位自动进位到 TB）
+const size = (b) => {
+  const r = flowUtils.flowTransfer(b);
+  return `${r.value} ${r.unit}`;
+};
+const pad = (n) => String(n).padStart(2, "0");
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+// 用本地时间，不用 toISOString —— 后者取的是 UTC 日期，东八区会差一天
+// （mitch 到期 UTC 2026-10-12 16:00，本地是 2026-10-13）
+const ymdhm = (d) => `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const sec = (ms) => `${(ms / 1000).toFixed(1)}s`;
+const ago = (ms) => {
+  const h = ms / 3600000;
+  return h < 48 ? `${h.toFixed(1)} 小时前` : `${(h / 24).toFixed(1)} 天前`;
+};
 
+// ── 取流量 ────────────────────────────────────────────────
+async function fetchFlow(name) {
+  const url = `${BASE}/api/sub/flow/${encodeURIComponent(name)}`;
+  let res;
+  try {
+    res = await $substore.http.get({ url, timeout: 20000 });
+  } catch (e) {
+    // 有的实现对 4xx/5xx 直接 reject，错误对象里仍可能带响应
+    res = e?.response || e;
+    if (!res || res.statusCode == null) return { ok: false, code: `${e?.message ?? e}` };
+  }
+  let j;
+  try {
+    j = JSON.parse(res.body);
+  } catch (e) {
+    return { ok: false, code: `HTTP ${res.statusCode} 返回的不是 JSON` };
+  }
+  if (res.statusCode === 200 && j?.status === "success") return { ok: true, data: j.data };
+  // 带上错误码：NO_FLOW_INFO 是机场那边的问题（没给 / 限流 / UA 不对），
+  // RESOURCE_NOT_FOUND 是订阅名对不上，两种处理方式完全不同
+  return { ok: false, code: j?.error?.code || `HTTP ${res.statusCode}` };
+}
+
+// ── 与上次的差值 ──────────────────────────────────────────
+// 两个基准：last 每次跑都更新，cron 只有定时跑才更新。
+// 这样白天随手点几下不会冲掉「距离上次定时消耗了多少」这个信息。
+// 定时那次两个一起更新，所以紧接着的第一次手动点，两行会显示成一样的。
+function delta(label, key, used) {
+  const prev = scriptResourceCache.get(key);
+  if (!prev || typeof prev.used !== "number") return null; // 第一次跑，没得比
+  const gap = ago(Date.now() - prev.ts);
+  const diff = used - prev.used;
+  // 已用变少 = 套餐重置了，不是「消耗了负数」
+  return diff < 0
+    ? `${label} 已重置（用量归零，${gap}）`
+    : `${label} 消耗 ${size(diff)}（${gap}）`;
+}
+
+// ── 拼成一条机场的内容 ────────────────────────────────────
+function render(name, d) {
+  const used = (d.usage?.upload || 0) + (d.usage?.download || 0);
+  const lines = [];
+
+  // total 为 0 表示不限流量或机场没配，这时候百分比没有意义
+  lines.push(
+    d.total > 0
+      ? `已用 ${size(used)} / ${size(d.total)}（${((used / d.total) * 100).toFixed(1)}%）`
+      : `已用 ${size(used)}`
+  );
+
+  const a = delta("较上次", `push-info:last:${name}`, used);
+  const b = delta("较上次定时", `push-info:cron:${name}`, used);
+  if (a) lines.push(a);
+  if (b) lines.push(b);
+
+  // 基准要在算完差值之后再更新
+  const now = Date.now();
+  scriptResourceCache.set(`push-info:last:${name}`, { used, ts: now }, BASELINE_TTL);
+  if (isScheduled)
+    scriptResourceCache.set(`push-info:cron:${name}`, { used, ts: now }, BASELINE_TTL);
+
+  // remainingDays 是「距离下次重置还有几天」，不是到期倒计时。
+  // 接口已经用订阅链接上的 #resetDay 算好了，这里只负责显示。
+  // 它按自然日算，所以只有日期没有时刻。
+  if (Number.isFinite(d.remainingDays)) {
+    const r = new Date();
+    r.setDate(r.getDate() + d.remainingDays);
+    lines.push(`重置 ${ymd(r)}（${d.remainingDays} 天后）`);
+  }
+  // expires 是秒级时间戳，时分是真实信息（pei 的到期是 16:44），不截掉
+  if (d.expires > 0) lines.push(`到期 ${ymdhm(new Date(d.expires * 1000))}`);
+
+  return lines;
+}
+
+// ── 推送 ──────────────────────────────────────────────────
 const endpoint = /^https?:\/\//.test(bark)
   ? bark.replace(/\/+$/, "")
   : `https://api.day.app/${bark}`;
 const GROUP = group ? decodeURI(group) : "SubStore";
 
-// 一条机场信息发一条 Bark。Bark 的 group 参数会把它们收在同一个分组里，
-// 通知中心是折叠的。机场名当标题，扫一眼就知道是谁。
 // 返回 Bark 的状态码，0 表示请求根本没发出去。调用处必须接住 ——
 // 不接的话 Bark 挂了你也看不出来，页面还是会写「已推送 N 个机场」。
 async function push(title, text) {
@@ -53,9 +161,8 @@ async function push(title, text) {
       body: JSON.stringify({ title, body: text, group: GROUP }),
       timeout: 10000,
     });
-    if (res.statusCode !== 200) {
+    if (res.statusCode !== 200)
       console.log(`[push-info] 推送 ${title} 失败：Bark 返回 ${res.statusCode}`);
-    }
     return res.statusCode;
   } catch (e) {
     console.log(`[push-info] 推送 ${title} 失败：${e.message ?? e}`);
@@ -63,77 +170,48 @@ async function push(title, text) {
   }
 }
 
-// 并行拉，而且**谁先回来谁先推**，不等最慢的那一家。
-// 代价是通知条数等于机场数、到达顺序不固定 —— 换来的是第一条几乎立刻就到。
-// 注意网页（和快捷指令）仍然要等全部跑完：HTTP 响应没法流式返回，
-// $content 是脚本 return 时一次性给出去的。
-const MAX_TRIES = 3;
-
-// 拉失败就重试，最多 MAX_TRIES 次。中间那几次失败不推送 —— 一个抖动的机场
-// 否则能连刷三条。只在最终成功或最终失败时推一条。
-// ms 算的是从第一次尝试到出结果的总时间，也就是你实际等了多久。
-async function fetchSub(name) {
-  const t = Date.now();
-  for (let tries = 1; tries <= MAX_TRIES; tries++) {
-    try {
-      // 触发该订阅的操作链，rename.js 跑完会把信息写进缓存。
-      // noCache 必须给：订阅要是开着缓存，这里直接吃缓存、根本不发请求，
-      // 那「拉取失败」告警就永远不会响，读到的数据也是旧的。
-      await produceArtifact({ type: "subscription", name, noCache: true });
-      return { ok: true, tries, ms: Date.now() - t };
-    } catch (e) {
-      console.log(`[push-info] ${name} 第 ${tries} 次拉取失败：${e.message ?? e}`);
-      if (tries === MAX_TRIES) return { ok: false, tries, ms: Date.now() - t };
-    }
-  }
-}
-
+// ── 主流程 ────────────────────────────────────────────────
+// 并行，而且谁先回来谁先推，不等最慢的那一家。
+// 网页（和快捷指令）仍然要等全部跑完：HTTP 响应没法流式返回。
 const t0 = Date.now();
 const settled = await Promise.all(
   targets.map(async (name) => {
-    const r = await fetchSub(name);
-    if (!r.ok) {
-      // 拉不动比流量数字重要得多：机场跑路、换域名、被墙都长这样。
-      // 耗时一起带上：20 秒一次那种是超时（Sub-Store 单条订阅超时就是
-      // 20 秒），零点几秒那种是连不上或被拒，两者排查方向完全不同。
-      const sent = await push(
-        `⚠️ ${name} · ${sec(r.ms)}`,
-        `订阅拉取失败（试了 ${r.tries} 次）`
-      );
-      return { name, ok: false, ms: r.ms, tries: r.tries, sent };
+    const t = Date.now();
+    let last;
+    for (let tries = 1; tries <= MAX_TRIES; tries++) {
+      last = await fetchFlow(name);
+      if (last.ok) {
+        const ms = Date.now() - t;
+        const retry = tries > 1 ? ` · 重试 ${tries - 1} 次` : "";
+        const lines = render(name, last.data);
+        const sent = await push(`${name} · ${sec(ms)}${retry}`, lines.join("\n"));
+        return { name, ok: true, ms, tries, lines, sent };
+      }
+      console.log(`[push-info] ${name} 第 ${tries} 次拉取失败：${last.code}`);
     }
-    // 一次就成功的不提重试，免得每条通知都带一段废话
-    const retry = r.tries > 1 ? ` · 重试 ${r.tries - 1} 次` : "";
-    // 各机场的文案是它自己写的公告原文，格式各不相同（「剩余流量」
-    // 「距离下次重置剩余」「上次更新」…），不去解析统一成表格 ——
-    // 机场改一个字就会解析错或漏掉。
-    const lines = scriptResourceCache.get(`${TAG}:${name}`) || [];
-    const sent = lines.length
-      ? await push(`${name} · ${sec(r.ms)}${retry}`, lines.join("\n"))
-      : undefined;
-    return { name, ok: true, ms: r.ms, tries: r.tries, lines, sent };
+    // 中间那几次失败不推送，只在最终失败时推一条
+    const ms = Date.now() - t;
+    const sent = await push(`⚠️ ${name} · ${sec(ms)}`, `${last.code}（试了 ${MAX_TRIES} 次）`);
+    return { name, ok: false, ms, tries: MAX_TRIES, code: last.code, sent };
   })
 );
 const totalMs = Date.now() - t0;
 
-// 网页上仍然给一份完整的，顺序按订阅列表固定，跟通知的到达顺序无关
+// 网页上给一份完整的，顺序按订阅列表固定，跟通知的到达顺序无关
 const blocks = [];
 const failed = [];
 for (const r of settled) {
   if (!r.ok) {
-    failed.push(`⚠️ ${r.name} 订阅拉取失败（试了 ${r.tries} 次，${sec(r.ms)}）`);
+    failed.push(`⚠️ ${r.name} ${r.code}（试了 ${r.tries} 次，${sec(r.ms)}）`);
   } else {
     const retry = r.tries > 1 ? ` 重试 ${r.tries - 1} 次` : "";
-    if (r.lines.length) {
-      blocks.push(`【${r.name}】 ${sec(r.ms)}${retry}\n${r.lines.join("\n")}`);
-    }
+    blocks.push(`【${r.name}】 ${sec(r.ms)}${retry}\n${r.lines.join("\n")}`);
   }
 }
 const body = [failed.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
-// sent 为 undefined = 这条压根没推（该机场没信息），不算失败
+// sent 为 undefined = 这条压根没推，不算失败
 const bad = settled.filter((r) => r.sent !== undefined && r.sent !== 200);
-
 const attempted = settled.filter((r) => r.sent !== undefined).length;
 
 let result;
