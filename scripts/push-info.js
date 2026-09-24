@@ -14,9 +14,10 @@
 //
 // 可选参数：
 //   subs=a,b    只推这几个订阅，默认全部
-//   group=      Bark 分组，默认 SubStore（一条机场一条通知，靠它折叠在一起）
+//   group=      Bark 分组，默认 SubStore
+//   title=      通知标题，默认「机场流量」
 
-const { bark, group, subs } = $arguments;
+const { bark, group, subs, title } = $arguments;
 if (!bark) throw new Error("缺少参数 bark=<key 或完整 URL>");
 
 // 后端 API 端口，取值跟 Sub-Store 源码同一行逻辑：
@@ -150,6 +151,7 @@ const endpoint = /^https?:\/\//.test(bark)
   ? bark.replace(/\/+$/, "")
   : `https://api.day.app/${bark}`;
 const GROUP = group ? decodeURI(group) : "SubStore";
+const TITLE = title ? decodeURI(title) : "机场流量";
 
 // 返回 Bark 的状态码，0 表示请求根本没发出去。调用处必须接住 ——
 // 不接的话 Bark 挂了你也看不出来，页面还是会写「已推送 N 个机场」。
@@ -171,33 +173,29 @@ async function push(title, text) {
 }
 
 // ── 主流程 ────────────────────────────────────────────────
-// 并行，而且谁先回来谁先推，不等最慢的那一家。
-// 网页（和快捷指令）仍然要等全部跑完：HTTP 响应没法流式返回。
-const t0 = Date.now();
+// 并行取数据，全部拿到之后合成一条推送。
+//
+// 以前是一个机场一条通知 —— 那时每家要 0.8~4 秒（得下载整个节点列表），
+// 先回来的先推能省下等待。换成 flow API 之后三家总共不到 2 秒，
+// 拆成三条只是让手机连响三下，没有收益。
+//
+// 代价是某家卡住时整条通知等它。但网页本来就要等全部跑完（$content 是
+// return 时一次性给出去的），所以手动点时通知晚到不影响；定时跑更没人等。
 const settled = await Promise.all(
   targets.map(async (name) => {
     const t = Date.now();
     let last;
     for (let tries = 1; tries <= MAX_TRIES; tries++) {
       last = await fetchFlow(name);
-      if (last.ok) {
-        const ms = Date.now() - t;
-        const retry = tries > 1 ? ` · 重试 ${tries - 1} 次` : "";
-        const lines = render(name, last.data);
-        const sent = await push(`${name} · ${sec(ms)}${retry}`, lines.join("\n"));
-        return { name, ok: true, ms, tries, lines, sent };
-      }
+      if (last.ok)
+        return { name, ok: true, ms: Date.now() - t, tries, lines: render(name, last.data) };
       console.log(`[push-info] ${name} 第 ${tries} 次拉取失败：${last.code}`);
     }
-    // 中间那几次失败不推送，只在最终失败时推一条
-    const ms = Date.now() - t;
-    const sent = await push(`⚠️ ${name} · ${sec(ms)}`, `${last.code}（试了 ${MAX_TRIES} 次）`);
-    return { name, ok: false, ms, tries: MAX_TRIES, code: last.code, sent };
+    return { name, ok: false, ms: Date.now() - t, tries: MAX_TRIES, code: last.code };
   })
 );
-const totalMs = Date.now() - t0;
 
-// 网页上给一份完整的，顺序按订阅列表固定，跟通知的到达顺序无关
+// 顺序按订阅列表固定。告警排最前 —— iOS 通知不展开时只显示前几行。
 const blocks = [];
 const failed = [];
 for (const r of settled) {
@@ -210,27 +208,20 @@ for (const r of settled) {
 }
 const body = [failed.join("\n"), ...blocks].filter(Boolean).join("\n\n");
 
-// sent 为 undefined = 这条压根没推，不算失败
-const bad = settled.filter((r) => r.sent !== undefined && r.sent !== 200);
-const attempted = settled.filter((r) => r.sent !== undefined).length;
-
 let result;
 if (!body) {
   result = "没有任何可推送的信息";
-} else if (!bad.length) {
-  result =
-    `已推送 ${blocks.length} 个机场` +
-    (failed.length ? ` + ${failed.length} 条告警` : "");
+  console.log(`[push-info] ${result}，跳过`);
 } else {
-  const codes = [...new Set(bad.map((r) => r.sent || "无响应"))].join(" / ");
-  result = `${attempted - bad.length}/${attempted} 条推送成功（失败的 Bark 返回 ${codes}）`;
+  const code = await push(TITLE, body);
+  result = code === 200 ? "已推送" : `推送失败，Bark 返回 ${code || "无响应"}`;
+  console.log(`[push-info] ${result}`);
 }
-console.log(`[push-info] ${result}，共 ${sec(totalMs)}`);
 
 // 产出内容 = 一行结果 + 完整信息。浏览器里点开这个地址（或加到手机主屏幕
 // 当按钮）就能直接看到数据，不用切到 Bark 去确认。
 $content = [
-  `${result} · 共 ${sec(totalMs)} · ${new Date().toLocaleString("zh-CN")}`,
+  `${result} · ${new Date().toLocaleString("zh-CN")}`,
   "",
   body,
   "",
