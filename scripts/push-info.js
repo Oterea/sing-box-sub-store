@@ -67,69 +67,6 @@ async function push(title, text) {
 // 代价是通知条数等于机场数、到达顺序不固定 —— 换来的是第一条几乎立刻就到。
 // 注意网页（和快捷指令）仍然要等全部跑完：HTTP 响应没法流式返回，
 // $content 是脚本 return 时一次性给出去的。
-// ── 与上次的差值 ─────────────────────────────────────────────
-// 从「剩余流量：73.47 GB」「剩余流量：96.28G / 100.00G」这类文案里抽数字。
-// 三家机场的写法现在是一致的（rename.js 里把响应头那条路也对齐成「剩余流量」），
-// 所以一个正则够用。抽不出来返回 null —— 显示成「无法计算」而不是静默消失，
-// 机场哪天改了文案你得能看见。
-const UNIT = { TB: 1024, T: 1024, GB: 1, G: 1, MB: 1 / 1024, M: 1 / 1024 };
-function findRemain(lines) {
-  for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/剩余流量[：:]\s*([\d.]+)\s*(TB|GB|MB|T|G|M)/i);
-    if (m) {
-      const n = parseFloat(m[1]);
-      const u = UNIT[m[2].toUpperCase()];
-      if (isFinite(n) && u) return { gb: n * u, idx: i };
-    }
-  }
-  return null;
-}
-
-const ago = (ms) => {
-  const h = ms / 3600000;
-  return h < 48 ? `${h.toFixed(1)} 小时前` : `${(h / 24).toFixed(1)} 天前`;
-};
-
-// 只有定时跑的那次才更新基准值。网页访问时 $options 带着请求信息，定时产出时
-// 它是 undefined —— 用这个区分。这样你白天随手点几下不会把基准冲掉，
-// 点开看到的始终是「距离上次定时推送消耗了多少」。
-const isScheduled = $options === undefined;
-
-function withDelta(name, lines) {
-  const hit = findRemain(lines);
-  const key = `${TAG}:last:${name}`;
-  const prev = scriptResourceCache.get(key);
-
-  let note = null;
-  if (!hit) {
-    note = "较上次：无法计算（没认出流量数字）";
-  } else if (prev && typeof prev.gb === "number") {
-    const diff = hit.gb - prev.gb;
-    const gap = ago(Date.now() - prev.ts);
-    // 剩余变多 = 套餐重置或充值，不是「消耗了负数」
-    note =
-      diff > 0.01
-        ? `较上次：+${diff.toFixed(2)} GB（已重置或充值，${gap}）`
-        : `较上次：消耗 ${Math.abs(diff).toFixed(2)} GB（${gap}）`;
-  }
-  // prev 不存在时不写这行 —— 第一次跑没得比，硬凑一句只会占地方
-
-  // 基准不存在时任何一次跑都建，否则从来不用定时的人永远看不到差值。
-  // 已经有基准了就只让定时那次更新。
-  if (hit && (isScheduled || !prev)) {
-    scriptResourceCache.set(
-      key,
-      { gb: hit.gb, ts: Date.now() },
-      30 * 24 * 3600 * 1000
-    );
-  }
-  if (!note) return lines;
-  // 紧跟在「剩余流量」那行下面，两个数字挨着才好对照
-  const out = lines.slice();
-  out.splice(hit ? hit.idx + 1 : out.length, 0, note);
-  return out;
-}
-
 const MAX_TRIES = 3;
 
 // 拉失败就重试，最多 MAX_TRIES 次。中间那几次失败不推送 —— 一个抖动的机场
@@ -170,8 +107,7 @@ const settled = await Promise.all(
     // 各机场的文案是它自己写的公告原文，格式各不相同（「剩余流量」
     // 「距离下次重置剩余」「上次更新」…），不去解析统一成表格 ——
     // 机场改一个字就会解析错或漏掉。
-    const raw = scriptResourceCache.get(`${TAG}:${name}`) || [];
-    const lines = raw.length ? withDelta(name, raw) : raw;
+    const lines = scriptResourceCache.get(`${TAG}:${name}`) || [];
     const sent = lines.length
       ? await push(`${name} · ${sec(r.ms)}${retry}`, lines.join("\n"))
       : undefined;
