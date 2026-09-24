@@ -375,7 +375,9 @@ async function infoFromHeaders(subName) {
     const info = raw && flowUtils.parseFlowHeaders(raw);
     if (!info || !(info.total > 0)) return [];
     const used = (info.usage?.upload || 0) + (info.usage?.download || 0);
-    const lines = [`已用流量：${fmtG(used)} / ${fmtG(info.total)}`];
+    // 措辞跟公告节点那条路对齐（机场自己写的普遍是「剩余流量：N GB」）。
+    // 统一之后消费方用一个正则就能抽出数字，不必为每种写法各写一套。
+    const lines = [`剩余流量：${fmtG(info.total - used)} / ${fmtG(info.total)}`];
     if (info.expires) {
       const ms = info.expires * 1000;
       lines.push(`套餐到期：${new Date(ms).toISOString().slice(0, 10)}`);
