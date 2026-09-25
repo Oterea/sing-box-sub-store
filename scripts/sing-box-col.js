@@ -195,6 +195,36 @@ let manualPolicies = Array.from(airports, (airport) => {
   return policy;
 });
 
+// PIN 装【节点】，是 MANUAL 的下一层：MANUAL 能钉到「新加坡」，钉不到「新加坡 16」。
+//
+// 为什么需要钉到节点这一层：urltest 只按延迟选，没有「可靠性」这个概念。
+// protocol/group/urltest.go 里 Select 的判据只有 history.Delay 一个量，而
+// URLTestHistory 这个结构里也确实只有 Delay —— 成功率根本没有地方存。
+// 结果就是一个延迟低但丢包的节点，会稳定赢过延迟略高但不掉线的节点。
+//
+// 实测（pei 69 个节点，两轮各 12 次探测，间隔 20 分钟）：
+//   一次探测能通的 51 个 → 12 次全通的 37 个 → 延迟极差 ≤100ms 的只有 17 个
+// 也就是说「成功率满分」的 37 个里有 20 个在抖，而这 20 个 urltest 完全看不见。
+//
+// 既然 sing-box 内部选不出来，就只能在外部选完再写回去。而 clash API 的
+// PUT /proxies/{name} 只接受 selector（experimental/clashapi/proxies.go）：
+//     selector, ok := proxy.(*group.Selector)
+//     if !ok { render.JSON(w, r, newError("Must be a Selector")) }
+// 实测确认：对 urltest 组 PUT 返回 400 "Must be a Selector"。
+//
+// 所以 PIN 存在的唯一理由，是给外部程序一个能钉到节点这一层的抓手。
+let pinPolicies = Array.from(airports, (airport) => {
+  let policy = new Policy(`${airport} PIN`, "selector");
+
+  policy.outbounds.push(
+    ...proxyNodes
+      .filter((node) => airportOf(node.tag) === airport)
+      .map((node) => node.tag),
+  );
+
+  return policy;
+});
+
 // openai 分组，专门收集非香港的节点
 let aiPolicies = new Policy("AI", "selector");
 
@@ -262,7 +292,8 @@ autoPolicies.forEach((policy) => {
 proxyPolicies.outbounds.push(
   ...(allAutoPolicy ? [allAutoPolicy.tag] : []),
   ...autoTags,
-  ...manualPolicies.map(p => p.tag)
+  ...manualPolicies.map(p => p.tag),
+  ...pinPolicies.map(p => p.tag)
 );
 
 
@@ -305,6 +336,7 @@ config.outbounds.push(
   ...autoPolicies,
   ...(fastPolicy ? [fastPolicy] : []),
   ...manualPolicies,
+  ...pinPolicies,
   ...countryPolicies,
   ...proxyNodes
 );
