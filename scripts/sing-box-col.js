@@ -7,6 +7,18 @@
 // 从外部参数中解构获取 type 和 name
 const { type, name } = $arguments;
 
+// 测速间隔，同时作用于 <机场> AUTO、地区组和 ALL AUTO。
+// 不传就不写这个字段，用 sing-box 自己的默认值（C.DefaultURLTestInterval = 3 分钟）。
+//
+// 它决定的是「节点挂了多久能被换走」的上限 —— 拨号失败时 sing-box 不会换节点
+// 重试，只删掉失败节点的测速记录，要等下一轮定时测速才会重选。
+//
+// 别设太小：失败的节点每个要等满 C.TCPTimeout = 15 秒，而一轮没跑完时
+// 下一个 tick 会被 g.checking.Swap(true) 直接丢弃。地区组 ~19 个节点、
+// 并发 10，全挂时一轮就要 2×15=30 秒 —— 设 5 秒和设 30 秒没有区别，
+// 只是在正常时把测速频率抬高了 6 倍，容易撞机场的限流。
+const AUTO_INTERVAL = $arguments.autointerval;
+
 // 根据 type 值匹配，转换为内部使用的类型
 let internalType = /^1$|col/i.test(type) ? "collection" : "subscription";
 
@@ -141,27 +153,33 @@ function Policy(tag, type) {
 
 let proxyPolicies = new Policy("proxy", "selector"); // 用户手动选择代理的分组
 
-// AUTO 装的是【节点】，不是地区组 —— 和下面的 MANUAL 刻意不一样。
+// AUTO 装【地区组】，不是节点。
 //
-// 两者用途不同，结构就不该一样：
-//   AUTO   机器按延迟自动挑 → 要准 → 扁平
-//   MANUAL 人手动浏览着选   → 要好找 → 按地区分层
+// 曾经改成过扁平（直接装该机场所有节点），理由是少一道 tolerance 门槛、
+// 延迟判断更准。后来读 sing-box 源码发现那个理由站不住，而代价很实在：
 //
-// 为什么扁平更准：urltest 换节点有个 tolerance 门槛（默认 50ms），新节点要快
-// 过这个数才会被换上。套一层地区组就多一道门槛，而且上层只看得到下层当前选中
-// 的那个 —— 下层因为门槛没换掉的更快节点，上层根本看不见。两层叠起来，最坏
-// 会比该机场真正最快的慢 100ms 左右。直接装节点只有一道门槛。
+// ① tolerance 根本不参与故障切换。protocol/group/urltest.go 的 Select 里：
+//        history := g.history.LoadURLTestHistory(RealTag(...));
+//        if history == nil { continue }                        // 死节点在这里就被跳过
+//        if minDelay == 0 || minDelay > history.Delay+g.tolerance { ... }
+//    死节点的测速记录在拨号失败时已被 DeleteURLTestHistory 删掉，走不到
+//    tolerance 那一行。所以扁平化换来的只是「两个都活着时换不换」的灵敏度。
 //
-// 地区组仍然会生成，只是不再被 AUTO 引用，只挂在 MANUAL 下面。MANUAL 是
-// selector 不测速，没有这个问题。
+// ② 扁平让一轮测速慢 3 倍多。嵌套时每层各建自己的 batch，并发各算各的：
+//        b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))
+//    69 个节点扁平 = 1 个 batch 跑 7 波；装 5 个地区组 = 5 个内层 batch 并行，
+//    每个 ~14 个节点跑 2 波。而失败的节点每个要等满 C.TCPTimeout = 15 秒，
+//    波数直接决定一轮要多久 —— 也就决定 interval 能设多短才真正生效。
+//
+// ③ 嵌套多一个逃生口：某个地区组冻在死节点上（它的 RealTag 没有 history），
+//    AUTO 会跳过它换到别的地区组。扁平就没有这一层。
+//
+// 机场稳定时两者差别不大，机场抖动时扁平是最坏的结构。
 let autoPolicies = Array.from(airports, (airport) => {
   let policy = new Policy(`${airport} AUTO`, "urltest");
+  if (AUTO_INTERVAL) policy.interval = AUTO_INTERVAL;
 
-  policy.outbounds.push(
-    ...proxyNodes
-      .filter((node) => airportOf(node.tag) === airport)
-      .map((node) => node.tag)
-  );
+  policy.outbounds.push(...Array.from(countriesOfAirport.get(airport) || []));
 
   return policy;
 });
@@ -192,11 +210,11 @@ aiPolicies.outbounds.push(...extractProxyTagsExcluding(proxyNodes, /(hong kong)/
 // 跨机场自动测速：装的是各机场的 AUTO 组，不是节点。
 //
 // ── 实验组：<机场> FAST ──────────────────────────────────────────────
-// 和 <机场> AUTO 同成员、同结构，唯一的区别是测速间隔从默认 3 分钟改成 30 秒。
+// 装该机场所有节点（扁平），测速间隔写死 30 秒。
 //
-// 存在的目的是做对照，只变一个变量，切过去用几天就能回答两个问题：
-//   1. 节点挂掉之后多久切走（3 分钟 vs 30 秒）
-//   2. 测速多出来的流量在机场后台是否看得出来
+// 注意它和 <机场> AUTO 已经不是同一个结构了 —— AUTO 装地区组，这个装节点。
+// 所以现在它是「扁平 + 30 秒」对「嵌套 + autointerval」的对照，两个变量都变了。
+// 想做单变量对照，用 autointerval 参数调 AUTO 自己的间隔就行，这个组可以不要。
 //
 // 为什么故障切换只能靠 interval：拨号失败时 sing-box【不会】自动换个节点重试，
 // 它只把失败节点的测速记录删掉，然后把错误抛给应用。要等下一次定时测速才会把
@@ -227,6 +245,7 @@ if (fastAirport) {
 // 只有一个机场时不建 —— 那时它和 <机场> AUTO 内容完全一样，纯冗余。
 let allAutoPolicy = airports.size > 1 ? new Policy("ALL AUTO", "urltest") : null;
 if (allAutoPolicy) {
+  if (AUTO_INTERVAL) allAutoPolicy.interval = AUTO_INTERVAL;
   allAutoPolicy.outbounds.push(...autoPolicies.map((p) => p.tag));
 }
 
@@ -267,6 +286,7 @@ proxyPolicies.outbounds.push(
 let countryPolicies = Array.from(countries, (countryName) => {
   // 创建策略组
   let countryPolicy = new Policy(countryName, "urltest");
+  if (AUTO_INTERVAL) countryPolicy.interval = AUTO_INTERVAL;
 
   // 将匹配该国家名的所有节点 tag 添加到策略组的 outbounds
   let regex = new RegExp(escapeRegExp(countryName), "i");
