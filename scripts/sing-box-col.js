@@ -240,7 +240,7 @@ aiPolicies.outbounds.push(...extractProxyTagsExcluding(proxyNodes, /(hong kong)/
 // 跨机场自动测速：装的是各机场的 AUTO 组，不是节点。
 //
 // ── 实验组：<机场> FAST ──────────────────────────────────────────────
-// 装该机场所有节点（扁平），测速间隔写死 30 秒。
+// 装该机场所有节点（扁平），测速间隔跟随 sing-box 默认值。
 //
 // 注意它和 <机场> AUTO 已经不是同一个结构了 —— AUTO 装地区组，这个装节点。
 // 所以现在它是「扁平 + 30 秒」对「嵌套 + autointerval」的对照，两个变量都变了。
@@ -260,7 +260,6 @@ if (fastAirport) {
     );
   }
   fastPolicy = new Policy(`${fastAirport} FAST`, "urltest");
-  fastPolicy.interval = "30s";
   fastPolicy.outbounds.push(
     ...proxyNodes
       .filter((node) => airportOf(node.tag) === fastAirport)
