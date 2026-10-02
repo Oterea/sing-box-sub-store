@@ -99,7 +99,6 @@
         {
             "tag": "tun-in",
             "type": "tun",
-            "stack": "system",
             "address": [
                 "198.18.0.1/30"
             ],

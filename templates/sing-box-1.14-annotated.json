@@ -250,7 +250,6 @@
     {
       "tag": "tun-in",
       "type": "tun",
-      "stack": "system",
       "address": ["172.19.0.1/30"],
 
       // 【不设 mtu】让内核按平台自己选：
