@@ -77,7 +77,7 @@
                 "action": "predefined"
             },
             {
-                "query_type": "HTTPS",
+                "query_type": ["HTTPS", "SVCB"],
                 "action": "predefined"
             },
             {
