@@ -450,14 +450,15 @@ outbound tag 不报错，后面的会静默覆盖前面的，等于悄悄少了�
 
 | 模板 | 用途 |
 |---|---|
-| `sing-box-1.xx-tmpl.json` | sing-box 官方客户端 |
-| `sing-box-1.xx-linux-tmpl.json` | Linux。监听全部收回 `127.0.0.1`，tun 用 `auto_redirect` |
-| `sing-box-1.xx-momo-tmpl.json` | OpenWrt 代理插件 [momo](https://github.com/nikkinikki-org/OpenWrt-momo) |
-| `sing-box-1.14-annotated.json` | 1.14 模板的逐行注释版，**JSONC 格式，不能直接使用** |
+| `sing-box-1.xx/universal-tmpl.json` | sing-box 官方客户端 |
+| `sing-box-1.xx/linux-tmpl.json` | Linux。监听全部收回 `127.0.0.1`，tun 用 `auto_redirect` |
+| `sing-box-1.xx/momo-tmpl.json` | OpenWrt 代理插件 [momo](https://github.com/nikkinikki-org/OpenWrt-momo) |
+| `sing-box-1.14/momo-kernel-only-tmpl.json` | Momo 仅核心模式：由 sing-box 自己管理 TUN 和自动重定向 |
+| `sing-box-1.14/annotated.json` | 1.14 模板的逐行注释版，**JSONC 格式，不能直接使用** |
 
 模板的 `outbounds` 里只有 `direct`，其余全部由脚本生成。路由规则引用 `direct`、`proxy`、`AI` 三个出站，前两个和 `AI` 都由 `sing-box-col.js` 生成。
 
-> ⚠️ `sing-box-1.11-tmpl.json` 和 `sing-box-1.12-linux-tmpl.json` 是早期版本，路由规则引用的是 `openai` 而不是 `AI`。当前脚本不生成 `openai`，用这两份会报 `outbound not found` 起不来。要用的话把模板里的 `openai` 改成 `AI`。
+> ⚠️ `sing-box-1.11/universal-tmpl.json` 和 `sing-box-1.12/linux-tmpl.json` 是早期版本，路由规则引用的是 `openai` 而不是 `AI`。当前脚本不生成 `openai`，用这两份会报 `outbound not found` 起不来。要用的话把模板里的 `openai` 改成 `AI`。
 
 ## sing-box 版本注意事项
 
