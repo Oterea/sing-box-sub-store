@@ -238,34 +238,6 @@ aiPolicies.outbounds.push(...extractProxyTagsExcluding(proxyNodes, /(hong kong)/
 
 
 // 跨机场自动测速：装的是各机场的 AUTO 组，不是节点。
-//
-// ── 实验组：<机场> FAST ──────────────────────────────────────────────
-// 装该机场所有节点（扁平），测速间隔跟随 sing-box 默认值。
-//
-// 注意它和 <机场> AUTO 已经不是同一个结构了 —— AUTO 装地区组，这个装节点。
-// 所以现在它是「扁平 + 30 秒」对「嵌套 + autointerval」的对照，两个变量都变了。
-// 想做单变量对照，用 autointerval 参数调 AUTO 自己的间隔就行，这个组可以不要。
-//
-// 为什么故障切换只能靠 interval：拨号失败时 sing-box【不会】自动换个节点重试，
-// 它只把失败节点的测速记录删掉，然后把错误抛给应用。要等下一次定时测速才会把
-// 它踢出候选、换成活的。所以「节点挂了多久能切走」的上限就是 interval。
-//
-// 不传 fast= 就不生成，产出与不加这段时逐字节相同。
-const fastAirport = $arguments.fast;
-let fastPolicy = null;
-if (fastAirport) {
-  if (!airports.has(fastAirport)) {
-    throw new Error(
-      `fast=${fastAirport} 不是这个订阅里的机场，当前有：${[...airports].join("、")}`
-    );
-  }
-  fastPolicy = new Policy(`${fastAirport} FAST`, "urltest");
-  fastPolicy.outbounds.push(
-    ...proxyNodes
-      .filter((node) => airportOf(node.tag) === fastAirport)
-      .map((node) => node.tag)
-  );
-}
 
 // 这样和平铺所有节点是等价的：sing-box 比较组的延迟时会一路往下钻到真正的
 // 节点（RealTag），所以「各机场最快里的最快」就是全局最快。但成员只有机场数
@@ -279,14 +251,8 @@ if (allAutoPolicy) {
 }
 
 // ALL AUTO 排第一 —— selector 默认选中第一项，装完开箱即用就是全局最快。
-// FAST 紧跟在它镜像的那个 AUTO 后面，面板上两个挨着，方便来回切着对比
 let autoTags = [];
-autoPolicies.forEach((policy) => {
-  autoTags.push(policy.tag);
-  if (fastPolicy && policy.tag === `${fastAirport} AUTO`) {
-    autoTags.push(fastPolicy.tag);
-  }
-});
+autoPolicies.forEach((policy) => autoTags.push(policy.tag));
 
 proxyPolicies.outbounds.push(
   ...(allAutoPolicy ? [allAutoPolicy.tag] : []),
@@ -333,7 +299,6 @@ config.outbounds.push(
   aiPolicies,
   ...(allAutoPolicy ? [allAutoPolicy] : []),
   ...autoPolicies,
-  ...(fastPolicy ? [fastPolicy] : []),
   ...manualPolicies,
   ...pinPolicies,
   ...countryPolicies,

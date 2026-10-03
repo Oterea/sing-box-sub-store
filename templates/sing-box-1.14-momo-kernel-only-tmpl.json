@@ -117,6 +117,33 @@
         "final": "proxy",
         "rules": [
             {
+                "type": "logical",
+                "mode": "and",
+                "rules": [
+                    {
+                        "port": [53, 853],
+                        "invert": true
+                    },
+                    {
+                        "clash_mode": "Global",
+                        "invert": true
+                    },
+                    {
+                        "type": "logical",
+                        "mode": "or",
+                        "rules": [
+                            {
+                                "ip_is_private": true
+                            },
+                            {
+                                "rule_set": "geoip/cn"
+                            }
+                        ]
+                    }
+                ],
+                "action": "bypass"
+            },
+            {
                 "action": "sniff"
             },
             {

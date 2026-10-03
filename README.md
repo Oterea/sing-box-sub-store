@@ -92,7 +92,6 @@ naixi Hong Kong 01  →  🇭🇰 naixi Hong Kong 01
 |---|---|---|
 | `name` | `naixi` | **Sub-Store 里那个订阅的名字**，用来找订阅 |
 | `type` | `col` | 只有组合订阅才需要填。单订阅不填 |
-| `fast` | 机场名 | 可选。额外生成一个 `<机场> FAST` 实验组，见下文 |
 
 > 两个脚本都有 `name=`，含义**完全不同**：
 > - `rename.js` 的 `name=` → 写进节点名里的前缀（现在默认自动取订阅名）
@@ -160,28 +159,14 @@ MANUAL 是 selector，不测速，没有这个问题，保留地区分层反而�
 https 测速约 18.5 KB（两次 TLS 握手：一次到机场服务器，一次到测试站点）。间隔
 减半，流量翻倍。
 
-所以不建议直接改全局，先用实验组对照：
+如果需要缩短测速间隔，直接给脚本传 `autointerval`，例如：
 
 ```
-fast=tolink
+autointerval=30s
 ```
 
-会额外生成一个 `tolink FAST`，成员和 `tolink AUTO` 完全一样，**唯一的区别是
-`interval` 从 3 分钟改成 30 秒**，并排放在 `tolink AUTO` 后面：
-
-```
-proxy (selector)
-    ALL AUTO
-    tolink AUTO           ← 默认参数
-    tolink FAST           ← interval 30s
-    pei AUTO
-    ...
-```
-
-在面板上来回切，对比两件事：节点挂掉后多久切走，以及机场后台的流量增量。
-觉得值就把 `interval` 挪到主组，不值就去掉 `fast=` 参数。
-
-不传 `fast=` 时产出与不带这个功能时完全相同。
+它会同时设置机场 AUTO、地区组和多机场时的 ALL AUTO。这样所有自动测速组
+使用同一个明确的间隔。
 
 ## 切换节点会掐断已有连接
 
