@@ -165,7 +165,7 @@
                         "port": 443
                     },
                     {
-                        "protocol": "stun"
+                        "protocol": ["stun", "quic"]
                     }
                 ],
                 "action": "reject",
