@@ -175,8 +175,9 @@
       //   HTTPS 记录」）是个每天都会遇到的正常答案，客户端安静地继续
       //   用 A 记录；REFUSED 则是异常信号，可能触发换 DNS 重试。
       {
-        "query_type": "HTTPS",
-        "action": "predefined"
+        "query_type": ["HTTPS", "SVCB"], // HTTPS / SVCB：网站连接能力提示，统一返回空的 NOERROR
+        "action": "predefined",
+        "rcode": "NOERROR"
       },
 
       // ④ 如果域名在国内网站名单里 → 就交给国内 DNS
@@ -319,6 +320,9 @@
         "action": "hijack-dns"
       },
 
+      // 私有地址（局域网、回环等）不经过代理，避免访问软路由和局域网设备异常
+      { "ip_is_private": true, "action": "route", "outbound": "direct" },
+
       // 如果模式切成「直连」→ 就走直连出口
       { "clash_mode": "Direct", "action": "route", "outbound": "direct" },
 
@@ -332,8 +336,8 @@
         "mode": "or",
         "rules": [
           { "port": 853 },                    // DoT 端口
-          { "network": "udp", "port": 443 },  // QUIC / HTTP3
-          { "protocol": "stun" }              // STUN（P2P 打洞）
+          { "network": "udp", "port": 443 },  // 常见 QUIC / HTTP3 端口
+          { "protocol": ["stun", "quic"] } // STUN 或已识别的 QUIC
         ],
         "action": "reject",
         "method": "default",

@@ -77,8 +77,9 @@
                 "action": "predefined"
             },
             {
-                "query_type": "HTTPS",
-                "action": "predefined"
+                "query_type": ["HTTPS", "SVCB"],
+                "action": "predefined",
+                "rcode": "NOERROR"
             },
             {
                 "rule_set": "geosite/cn",
@@ -141,6 +142,11 @@
                 "action": "hijack-dns"
             },
             {
+                "ip_is_private": true,
+                "action": "route",
+                "outbound": "direct"
+            },
+            {
                 "clash_mode": "Direct",
                 "action": "route",
                 "outbound": "direct"
@@ -162,7 +168,7 @@
                         "port": 443
                     },
                     {
-                        "protocol": "stun"
+                        "protocol": ["stun", "quic"]
                     }
                 ],
                 "action": "reject",
