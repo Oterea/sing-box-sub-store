@@ -128,6 +128,13 @@
     // ────────────────────────────────────────────────────────────
     "rules": [
 
+      // HTTPS / SVCB 查询统一返回 NOERROR 空结果，不受 Direct / Global 模式影响
+      {
+        "query_type": ["HTTPS", "SVCB"], // HTTPS / SVCB：网站连接能力提示，统一返回空的 NOERROR
+        "action": "predefined",
+        "rcode": "NOERROR"
+      },
+
       // ① 如果 SFM 里模式切成「直连」→ 就交给国内 DNS 查
       {
         "clash_mode": "Direct",          // 如果
@@ -157,27 +164,6 @@
       {
         "rule_set": "geosite/category-ads-all",
         "action": "predefined"
-      },
-
-      // 屏蔽 HTTPS / SVCB 类型的 DNS 记录
-      //
-      //   这里的 HTTPS 不是「网址的 https」，是一种【DNS 记录类型】，
-      //   里面装的是连接参数：alpn=h3（支不支持 HTTP/3）、ECH 配置等。
-      //
-      //   为什么屏蔽：
-      //     · 下面 route 规则里已经把 QUIC（udp 443）掐了，
-      //       浏览器却会从这条记录得知「有 HTTP/3」→ 发 QUIC → 被掐 → 回落，
-      //       白跑一趟。屏蔽掉它就不会去试。
-      //     · ECH 会把 TLS 握手里的真实域名加密，导致嗅探不到域名，
-      //       而本配置的路由规则大量依赖嗅探出的域名。
-      //
-      //   用 predefined 而不是 reject：返回 NOERROR+空（「这域名没有
-      //   HTTPS 记录」）是个每天都会遇到的正常答案，客户端安静地继续
-      //   用 A 记录；REFUSED 则是异常信号，可能触发换 DNS 重试。
-      {
-        "query_type": ["HTTPS", "SVCB"], // HTTPS / SVCB：网站连接能力提示，统一返回空的 NOERROR
-        "action": "predefined",
-        "rcode": "NOERROR"
       },
 
       // ④ 如果域名在国内网站名单里 → 就交给国内 DNS
@@ -323,12 +309,7 @@
       // 私有地址（局域网、回环等）不经过代理，避免访问软路由和局域网设备异常
       { "ip_is_private": true, "action": "route", "outbound": "direct" },
 
-      // 如果模式切成「直连」→ 就走直连出口
-      { "clash_mode": "Direct", "action": "route", "outbound": "direct" },
-
-      // 如果模式切成「全局」→ 就走代理出口
-      { "clash_mode": "Global", "action": "route", "outbound": "proxy" },
-
+      // DoT、常见 QUIC 端口、STUN 和已识别的 QUIC 始终拒绝，不受 Direct / Global 绕过
       // 如果满足以下【任意一条】→ 就掐断
       //   logical + mode:or = 「或」，子条件命中一个就算命中
       { 
@@ -353,6 +334,12 @@
         //  设为 true 后永远快速拒绝，代价是持续回 ICMP 的开销（可忽略）。
         "no_drop": true
       },
+
+      // 如果模式切成「直连」→ 就走直连出口
+      { "clash_mode": "Direct", "action": "route", "outbound": "direct" },
+
+      // 如果模式切成「全局」→ 就走代理出口
+      { "clash_mode": "Global", "action": "route", "outbound": "proxy" },
 
       // 如果目标端口是 22 / 3306 / 3307 → 就走直连（SSH 和数据库不走代理）
       { "port": [22, 3306, 3307], "action": "route", "outbound": "direct" },

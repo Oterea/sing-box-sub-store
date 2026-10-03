@@ -63,6 +63,11 @@
         ],
         "rules": [
             {
+                "query_type": ["HTTPS", "SVCB"],
+                "action": "predefined",
+                "rcode": "NOERROR"
+            },
+            {
                 "clash_mode": "Direct",
                 "action": "route",
                 "server": "dns-local"
@@ -75,11 +80,6 @@
             {
                 "rule_set": "geosite/category-ads-all",
                 "action": "predefined"
-            },
-            {
-                "query_type": ["HTTPS", "SVCB"],
-                "action": "predefined",
-                "rcode": "NOERROR"
             },
             {
                 "rule_set": "geosite/cn",
@@ -150,16 +150,6 @@
                 "outbound": "direct"
             },
             {
-                "clash_mode": "Direct",
-                "action": "route",
-                "outbound": "direct"
-            },
-            {
-                "clash_mode": "Global",
-                "action": "route",
-                "outbound": "proxy"
-            },
-            {
                 "type": "logical",
                 "mode": "or",
                 "rules": [
@@ -177,6 +167,16 @@
                 "action": "reject",
                 "method": "default",
                 "no_drop": true
+            },
+            {
+                "clash_mode": "Direct",
+                "action": "route",
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "Global",
+                "action": "route",
+                "outbound": "proxy"
             },
             {
                 "port": [
