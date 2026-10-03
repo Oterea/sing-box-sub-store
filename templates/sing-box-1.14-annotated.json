@@ -239,6 +239,26 @@
       "type": "tun",
       "address": ["172.19.0.1/30"],
 
+      // Linux 使用 auto_redirect + 默认 dns_mode: "hijack" 时，DNS 的自动处理流程：
+      //
+      //   设备 DNS 请求
+      //       ↓
+      //   auto_redirect 自动重定向到 dns_address
+      //       ↓
+      //   sing-box 将该地址识别为 hijack-dns
+      //       ↓
+      //   进入上面的 DNS 模块（dns.rules 再选择具体的上游 DNS）
+      //
+      // 这部分由 TUN/auto_redirect 自动完成，不依赖 route.rules 中
+      // 的 port: 53 规则才能接管。下面 route.rules 的 hijack-dns 规则
+      // 仍保留，用于处理已经进入 sing-box 路由流程的其他 DNS 请求，
+      // 以及没有被 TUN 自动机制接管的情况。
+      //
+      // 未显式设置 dns_address 时，sing-box 会使用 address 中第一个
+      // IPv4/IPv6 地址的下一个地址作为内部 DNS 接收地址，并自动按
+      // hijack-dns 处理。显式设置 dns_address 后，则应配置对应的
+      // hijack-dns route 规则。
+
       // 【不设 mtu】让内核按平台自己选：
       //   Network Extension (SFM/SFI) → 4064
       //   Android                     → 9000
@@ -280,7 +300,15 @@
     //    sniff         就嗅探这是什么协议     → 不结束，继续往下
     //    hijack-dns    就把 DNS 请求截下来自己处理
     //    resolve       就把域名解析成 IP      → 不结束
+    //    bypass        在 Linux + auto_redirect 的预匹配阶段，
+    //                  让连接从内核层面绕过 sing-box
     //    route-options 就只设选项不选出口      → 不结束
+    //
+    //  bypass 不是普通的 direct：它的特殊作用只发生在
+    //  auto_redirect 的预匹配阶段。命中后，内核保存该连接的绕过状态，
+    //  后续数据包不再被 auto_redirect 送入 sing-box。
+    //  如果 bypass 写了 outbound，但运行在其他场景，行为等同于 route；
+    //  不写 outbound 时则只适用于 auto_redirect 的预匹配。
     // ────────────────────────────────────────────────────────────
     "rules": [
 
