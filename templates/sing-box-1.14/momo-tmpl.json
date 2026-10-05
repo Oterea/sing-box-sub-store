@@ -44,21 +44,39 @@
     ],
     "http_clients": [
         {
-            "tag": "default"
+            "tag": "default",
+            "detour": "direct"
         }
     ],
     "dns": {
         "servers": [
             {
-                "tag": "dns-remote",
-                "type": "https",
-                "server": "1.1.1.1",
-                "detour": "proxy"
+                "tag": "dns-hosts",
+                "type": "hosts",
+                "predefined": {
+                    "dns.alidns.com": ["223.5.5.5", "223.6.6.6"],
+                    "doh.pub": ["1.12.12.21", "120.53.53.53"],
+                    "dns.google": ["8.8.8.8", "8.8.4.4"]
+                }
             },
             {
-                "tag": "dns-local",
+                "tag": "dns-ali",
                 "type": "https",
-                "server": "223.5.5.5"
+                "server": "dns.alidns.com",
+                "domain_resolver": "dns-hosts"
+            },
+            {
+                "tag": "dns-pub",
+                "type": "https",
+                "server": "doh.pub",
+                "domain_resolver": "dns-hosts"
+            },
+            {
+                "tag": "dns-google",
+                "type": "https",
+                "server": "dns.google",
+                "domain_resolver": "dns-hosts",
+                "detour": "proxy"
             }
         ],
         "rules": [
@@ -70,12 +88,12 @@
             {
                 "clash_mode": "Direct",
                 "action": "route",
-                "server": "dns-local"
+                "server": "dns-ali"
             },
             {
                 "clash_mode": "Global",
                 "action": "route",
-                "server": "dns-remote"
+                "server": "dns-google"
             },
             {
                 "rule_set": "geosite/category-ads-all",
@@ -83,16 +101,56 @@
             },
             {
                 "rule_set": "geosite/cn",
-                "action": "route",
-                "server": "dns-local"
+                "action": "evaluate",
+                "server": "dns-ali",
+                "tag": "dns-ali-response",
+                "timeout": "3s"
+            },
+            {
+                "rule_set": "geosite/cn",
+                "action": "evaluate",
+                "server": "dns-pub",
+                "tag": "dns-pub-response",
+                "timeout": "3s"
+            },
+            {
+                "rule_set": "geosite/cn",
+                "match_response": "dns-ali-response",
+                "response_rcode": "NOERROR",
+                "action": "respond",
+                "race": true
+            },
+            {
+                "rule_set": "geosite/cn",
+                "match_response": "dns-pub-response",
+                "response_rcode": "NOERROR",
+                "action": "respond",
+                "race": true
             },
             {
                 "rule_set": "geosite/geolocation-!cn",
                 "action": "route",
-                "server": "dns-remote"
+                "server": "dns-google"
+            },
+            {
+                "query_type": "A",
+                "action": "evaluate",
+                "server": "dns-google",
+                "client_subnet": "223.65.16.0/24",
+                "timeout": "2s"
+            },
+            {
+                "match_response": true,
+                "rule_set": "geoip/cn",
+                "action": "route",
+                "server": "dns-ali"
+            },
+            {
+                "match_response": true,
+                "action": "respond"
             }
         ],
-        "final": "dns-remote",
+        "final": "dns-google",
         "optimistic": true,
         "strategy": "ipv4_only"
     },
@@ -128,7 +186,7 @@
     ],
     "route": {
         "default_domain_resolver": {
-            "server": "dns-local"
+            "server": "dns-ali"
         },
         "default_http_client": "default",
         "auto_detect_interface": true,

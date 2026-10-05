@@ -14,7 +14,9 @@
 
 ## 共同配置
 
-- 国内域名通过 `dns-local`（阿里 DoH）查询，境外域名及未命中的域名通过 `dns-remote`（Cloudflare DoH，经过 `proxy`）查询。
+- 已收录的国内域名由 `dns-ali`（阿里 DoH）和 `dns-pub`（腾讯 DoH）竞速查询，覆盖 A、AAAA、TXT、MX、CNAME 等查询类型；境外域名及未命中的域名通过 `dns-google`（Google DoH，经过 `proxy`）查询。
+- Direct 模式直接使用 `dns-ali`；普通规则下的国内域名使用阿里和腾讯竞速。未收录域名只有 A 查询会进入 IP 地理位置判断，TXT、MX 等其他查询使用默认的 `dns-google`。国外 DNS 不参与国内竞速。
+- `dns-hosts` 只保存几个 DoH 服务器自身的固定地址，用于建立 DoH 连接，不负责解析普通网站。
 - DNS 策略为 `ipv4_only`，启用乐观缓存；HTTPS/SVCB 查询返回 `NOERROR` 空响应。
 - 路由包含局域网直连、国内直连、指定服务分流和默认代理；包含 DoT、UDP 443、STUN、QUIC 拒绝规则，实际执行取决于规则顺序及匹配结果。
 - 策略组和订阅节点由脚本生成。`autointerval` 可设置自动测速间隔，不传则使用 sing-box 默认值；脚本不设置 URLTest 的 `idle_timeout`。
