@@ -155,7 +155,8 @@
     ],
     "final": "dns-google",
     "optimistic": true,
-    "strategy": "ipv4_only"
+    "strategy": "ipv4_only",
+    "reverse_mapping": true
   },
   "inbounds": [
     {
@@ -174,9 +175,18 @@
       //   进入上面的 DNS 模块（dns.rules 再选择具体的上游 DNS）
       //
       // 这部分由 TUN/auto_redirect 自动完成，不依赖 route.rules 中
-      // 的 port: 53 规则才能接管。下面 route.rules 的 hijack-dns 规则
-      // 仍保留，用于处理已经进入 sing-box 路由流程的其他 DNS 请求，
-      // 以及没有被 TUN 自动机制接管的情况。
+      // 的 port: 53 规则才能接管。
+      //
+      // 三种情况要区分：
+      //   1. tun-in + auto_redirect：端口 53 由内核自动重定向，
+      //      不需要额外的 port: 53 hijack-dns 规则。
+      //   2. tun-in + 没有 auto_redirect：端口 53 只是进入 TUN，
+      //      需要 route.rules 用 hijack-dns 交给 DNS 模块。
+      //   3. mixed-in：请求通过 SOCKS/HTTP 代理入口进入，
+      //      没有经过 TUN 的 auto_redirect，也需要 hijack-dns 规则。
+      //
+      // 因此下面的 route hijack-dns 规则主要服务于第 2、3 种情况；
+      // 如果配置只保留 tun-in + auto_redirect，可以删除它。
       //
       // 未显式设置 dns_address 时，sing-box 会使用 address 中第一个
       // IPv4/IPv6 地址的下一个地址作为内部 DNS 接收地址，并自动按
@@ -240,7 +250,11 @@
       // sniff 不结束，继续往下匹配
       { "action": "sniff" },
 
-      // 如果是 DNS 请求 → 就截下来交给上面的 dns 模块处理
+      // 如果是 DNS 请求 → 就截下来交给上面的 dns 模块处理。
+      // 对 tun-in + auto_redirect 的端口 53 流量，这一步通常已经由
+      // TUN 的内核自动重定向完成；这里保留 route 规则是为了覆盖：
+      //   - 没有 auto_redirect 的 tun-in
+      //   - 通过 mixed-in 进入的手动代理请求
       //
       //   两个条件并联（mode: "or"，任一满足即可），各自补对方的盲区：
       //     port 53      抓「嗅探没认出来的」—— 畸形包、不认识的查询类型

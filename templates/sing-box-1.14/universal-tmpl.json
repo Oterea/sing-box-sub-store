@@ -152,7 +152,8 @@
         ],
         "final": "dns-google",
         "optimistic": true,
-        "strategy": "ipv4_only"
+        "strategy": "ipv4_only",
+        "reverse_mapping": true
     },
     "inbounds": [
         {
@@ -167,7 +168,7 @@
                 "http_proxy": {
                     "enabled": true,
                     "server": "127.0.0.1",
-                    "server_port": 2080
+                    "server_port": 7890
                 }
             }
         },
@@ -175,7 +176,7 @@
             "tag": "mixed-in",
             "type": "mixed",
             "listen": "127.0.0.1",
-            "listen_port": 2080
+            "listen_port": 7890
         }
     ],
     "route": {
@@ -237,19 +238,7 @@
                 "outbound": "proxy"
             },
             {
-                "port": [
-                    22,
-                    3306,
-                    3307
-                ],
-                "action": "route",
-                "outbound": "direct"
-            },
-            {
-                "rule_set": [
-                    "geoip/private",
-                    "geosite/private"
-                ],
+                "rule_set": "geosite/private",
                 "action": "route",
                 "outbound": "direct"
             },
@@ -263,20 +252,17 @@
             {
                 "rule_set": [
                     "geosite/youtube",
-                    "geoip/google",
                     "geosite/google",
-                    "geosite/github"
+                    "geosite/github",
+                    "geosite/telegram"
                 ],
                 "action": "route",
                 "outbound": "proxy"
             },
             {
-                "rule_set": [
-                    "geoip/telegram",
-                    "geosite/telegram"
-                ],
+                "rule_set": "geosite/cn",
                 "action": "route",
-                "outbound": "proxy"
+                "outbound": "direct"
             },
             {
                 "rule_set": "geosite/geolocation-!cn",
@@ -284,10 +270,16 @@
                 "outbound": "proxy"
             },
             {
-                "rule_set": [
-                    "geosite/cn",
-                    "geoip/cn"
-                ],
+                "inbound": "mixed-in",
+                "action": "resolve"
+            },
+            {
+                "rule_set": "geoip/telegram",
+                "action": "route",
+                "outbound": "proxy"
+            },
+            {
+                "rule_set": "geoip/cn",
                 "action": "route",
                 "outbound": "direct"
             }
@@ -308,8 +300,6 @@
                     "geosite/telegram",
                     "geosite/youtube",
                     "geoip/cn",
-                    "geoip/google",
-                    "geoip/private",
                     "geoip/telegram"
                 ]
             }

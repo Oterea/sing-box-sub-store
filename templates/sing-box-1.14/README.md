@@ -6,8 +6,8 @@
 
 | 文件 | 使用场景 | 流量接管方式 |
 | --- | --- | --- |
-| [universal-tmpl.json](universal-tmpl.json) | sing-box 官方客户端，例如 iPhone、macOS、Android | TUN；包含监听 `127.0.0.1:2080` 的 HTTP/SOCKS mixed 入站和平台 HTTP 代理设置 |
-| [linux-tmpl.json](linux-tmpl.json) | 独立运行 sing-box 的 Linux 环境 | sing-box 自己通过 `auto_route` 和 `auto_redirect` 管理 TUN、路由和流量重定向；当前未加入 `bypass` |
+| [universal-tmpl.json](universal-tmpl.json) | sing-box 官方客户端，例如 iPhone、macOS、Android | TUN；包含监听 `127.0.0.1:7890` 的 HTTP/SOCKS mixed 入站和平台 HTTP 代理设置 |
+| [linux-tmpl.json](linux-tmpl.json) | 独立运行 sing-box 的 Linux 环境 | sing-box 自己通过 `auto_route`、`auto_redirect` 和 `bypass` 管理 TUN、路由和流量重定向；包含手动使用的 `mixed-in:7890` |
 | [momo-tmpl.json](momo-tmpl.json) | OpenWrt Momo 的普通代理模式 | Momo 管理透明代理防火墙和策略路由；模板提供 DNS、Redirect、TProxy 和 TUN 入站，TUN 的 `auto_route`、`auto_redirect` 均关闭 |
 | [momo-kernel-only-tmpl.json](momo-kernel-only-tmpl.json) | OpenWrt Momo 开启“仅核心”模式 | Momo 管理核心进程和配置；sing-box 自己管理 TUN、路由、自动重定向和 `bypass` |
 | [annotated.json](annotated.json) | 阅读配置机制和参数说明 | 通用模板的注释版，含额外机制说明；这是 JSONC，不作为普通 JSON 模板直接使用 |
@@ -32,17 +32,25 @@
 
 使用 `momo-kernel-only-tmpl.json`，并在 Momo 中开启“仅核心”。Momo 的普通透明代理接管和配置混入不参与此模式，网络接管由最终 sing-box 配置负责。
 
-模板只保留 TUN：
+模板包含由 sing-box 管理的 TUN，以及监听 `0.0.0.0:7890` 的 mixed 入站。它不设置 `platform.http_proxy`，因此不会修改宿主机系统代理；需要使用 mixed 入站时，由客户端或局域网设备手动设置代理地址。
 
 ```json
-{
-  "tag": "tun-in",
-  "type": "tun",
-  "interface_name": "momo",
-  "address": ["172.31.0.1/30"],
-  "auto_route": true,
-  "auto_redirect": true
-}
+[
+  {
+    "tag": "tun-in",
+    "type": "tun",
+    "interface_name": "momo",
+    "address": ["172.31.0.1/30"],
+    "auto_route": true,
+    "auto_redirect": true
+  },
+  {
+    "tag": "mixed-in",
+    "type": "mixed",
+    "listen": "0.0.0.0",
+    "listen_port": 7890
+  }
+]
 ```
 
 没有显式填写 `dns_mode` 和 `dns_address`：使用默认 `hijack` 模式和自动推导的 DNS 接收地址 `172.31.0.2`。被自动接管的 53 端口请求交给 sing-box DNS 模块。Linux 下发往本机接口地址（例如路由器 LAN IP）的 DNS 不会被这套自动机制劫持，需要结合 dnsmasq 的实际转发配置判断。
