@@ -186,7 +186,7 @@
                 "mode": "and",
                 "rules": [
                     {
-                        "port": [53, 853],
+                        "port": 853,
                         "invert": true
                     },
                     {
