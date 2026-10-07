@@ -8,7 +8,7 @@
 - 自动生成 sing-box 节点和策略组；
 - 支持单机场和多机场组合订阅；
 - 提供 universal、Linux、Momo 等运行环境模板；
-- 可选接入 sing-box-smart 面板进行节点检测和选择。
+- 可选接入 [sing-box-smart](https://github.com/Oterea/sing-box-smart) 面板进行节点检测和选择。
 
 ## 工作流程
 
@@ -32,20 +32,44 @@ sing-box-col.js：写入模板并生成策略组
 
 在订阅的节点操作中按顺序添加：
 
-1. `rename.js`；
-2. Sub-Store 自带的旗帜操作，或给 `rename.js` 添加 `flag` 参数。
+1. 添加下面的脚本操作：
 
-`rename.js` 一般不需要参数。需要自定义机场前缀时再传入 `name=xxx`。
+   ```text
+   https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/rename.js
+   ```
+
+2. 添加 Sub-Store 自带的旗帜操作，或在脚本 URL 后添加 `#flag`。
+
+需要自定义机场前缀时，在脚本 URL 后添加参数，例如：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/rename.js#name=naixi
+```
 
 不要把 `rename.js` 同时挂到组合订阅上。组合订阅只负责组合已经处理过的子订阅。
 
 ### 2. 创建配置文件
 
-在 Sub-Store 的“文件”中：
+在 Sub-Store 的“文件”中选择“本地”内容，然后复制下面任意一个模板地址：
 
-1. 选择 `templates/sing-box-1.14/` 下的模板；
-2. 添加脚本 `scripts/sing-box-col.js`；
-3. 根据需要填写参数。
+| 使用场景 | 模板地址 |
+| --- | --- |
+| iPhone、macOS 等官方客户端 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/universal-tmpl.json` |
+| Linux 独立运行 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/linux-tmpl.json` |
+| Momo 普通模式 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/momo-tmpl.json` |
+| Momo 仅核心模式 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/momo-kernel-only-tmpl.json` |
+
+然后给这个文件添加脚本操作：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js#name=你的订阅名称
+```
+
+组合订阅使用：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js#name=你的组合订阅名称&type=col
+```
 
 脚本参数：
 
@@ -57,16 +81,16 @@ sing-box-col.js：写入模板并生成策略组
 | `smart=on` | 可选 | 生成 `<机场> SMART` 节点选择组，默认不生成 |
 | `strip-ech=on` | 可选 | 删除节点中的 `tls.ech`，默认保留 |
 
-使用 sing-box-smart 时传入：
+使用 [sing-box-smart](https://github.com/Oterea/sing-box-smart) 时，将脚本参数改为：
 
 ```text
-smart=on
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js#name=你的订阅名称&smart=on
 ```
 
-如果节点带 ECH，且当前 DNS 规则不允许获取 HTTPS/SVCB 记录，可按需传入：
+如果节点带 ECH，且当前 DNS 规则不允许获取 HTTPS/SVCB 记录，可使用：
 
 ```text
-strip-ech=on
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js#name=你的订阅名称&strip-ech=on
 ```
 
 ## 生成的策略组
@@ -75,7 +99,7 @@ strip-ech=on
 
 - `<机场> AUTO`：机场内节点自动测速；
 - `<机场> MANUAL`：按地区选择；
-- `<机场> SMART`：仅在传入 `smart=on` 时生成，供 sing-box-smart 使用；
+- `<机场> SMART`：仅在传入 `smart=on` 时生成，供 [sing-box-smart](https://github.com/Oterea/sing-box-smart) 使用；
 - `ALL AUTO`：多个机场时生成，自动选择最快机场；
 - `proxy`：主代理选择组；
 - `AI`：非香港节点组成的 AI 专用组；
@@ -117,7 +141,7 @@ strip-ech=on
 - HTTPS/SVCB 查询默认返回空的 `NOERROR` 响应，因此启用 ECH 的节点可能需要使用真实 HTTPS 记录或传入 `strip-ech=on`；
 - 路由包含私有地址、国内域名和国内 IP 的直连规则；
 - DoT、UDP 443、STUN 和 QUIC 默认拒绝；
-- 模板没有显式设置 TUN `stack`，使用 sing-box 默认值。
+- 模板没有显式设置 TUN `stack`，使用 sing-box 默认的 `sing-tun` 实现；相比用户态协议栈通常开销更低、性能更好。
 
 ## Momo 仅核心模式
 

@@ -18,6 +18,12 @@
 
 ## rename.js
 
+脚本地址：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/rename.js
+```
+
 统一节点名称和地区名称，生成类似：
 
 ```text
@@ -35,6 +41,12 @@
 
 ## sing-box-col.js
 
+脚本地址：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js
+```
+
 读取模板和处理后的订阅，生成节点、机场策略组、地区策略组和最终配置。
 
 | 参数 | 作用 |
@@ -48,6 +60,12 @@
 `smart` 和 `strip-ech` 默认关闭。
 
 ## push-info.js
+
+脚本地址：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/push-info.js
+```
 
 调用 Sub-Store 的流量接口，将机场流量、重置时间和到期时间推送到 Bark。
 

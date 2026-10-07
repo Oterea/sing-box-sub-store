@@ -29,6 +29,7 @@
 - 国内域名使用 `dns-ali` 和 `dns-pub` 竞速；
 - 境外及未命中域名使用 `dns-google`；
 - 使用真实 IP，不使用 FakeIP；
+- 未显式设置 TUN `stack`，使用 sing-box 默认的 `sing-tun` 实现；相比用户态协议栈通常开销更低、性能更好；
 - DNS 使用 `ipv4_only`、缓存和反向映射；
 - HTTPS/SVCB 查询默认返回空的 `NOERROR` 响应；
 - DoT、UDP 443、STUN 和 QUIC 默认拒绝；
