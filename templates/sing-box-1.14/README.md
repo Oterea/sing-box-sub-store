@@ -18,6 +18,7 @@
 | `universal-tmpl.json` | iPhone、macOS 等 sing-box 客户端 | TUN、系统 HTTP 代理、`mixed-in:7890` |
 | `linux-tmpl.json` | Linux 独立运行 sing-box | TUN、`auto_route`、`auto_redirect`、`bypass` |
 | `momo-tmpl.json` | Momo 普通代理模式 | 由 Momo 管理透明代理接管 |
+| `momo-old-tmpl.json` | 旧版 Momo 模板回退或对比 | 保留历史配置，不建议新部署使用 |
 | `momo-kernel-only-tmpl.json` | Momo 仅核心模式 | 由 sing-box 管理 TUN 和自动重定向 |
 | `annotated.json` | 阅读配置机制 | JSONC 注释版，不能直接运行 |
 
