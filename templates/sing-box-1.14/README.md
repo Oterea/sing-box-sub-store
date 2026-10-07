@@ -26,16 +26,7 @@
 
 ## DNS 和路由
 
-- 国内域名使用 `dns-ali` 和 `dns-pub` 竞速；
-- 境外及未命中域名使用 `dns-google`；
-- 使用真实 IP，不使用 FakeIP；
-- 未显式设置 TUN `stack`，使用 sing-box 默认的 `sing-tun` 实现；相比用户态协议栈通常开销更低、性能更好；
-- DNS 使用 `ipv4_only`、缓存和反向映射；
-- HTTPS/SVCB 查询默认返回空的 `NOERROR` 响应；
-- DoT、UDP 443、STUN 和 QUIC 默认拒绝；
-- 普通国内流量直连，其他流量按域名、IP 和最终代理规则处理。
-
-启用 ECH 的节点需要读取 HTTPS DNS 记录。如果模板规则使节点无法获得 ECH 配置，可以传入 `strip-ech=on` 删除节点 ECH，改用普通 TLS。
+模板使用真实 IP，不使用 FakeIP；具体 DNS、路由、TUN、ECH 和性能说明见根目录 [FAQ](../../FAQ.md)。
 
 完整流程见：[dns-routing-flow.md](dns-routing-flow.md)。
 
@@ -54,23 +45,7 @@
 - mixed 入站：`0.0.0.0:7890`；
 - 不设置 `platform.http_proxy`，不会自动修改宿主机系统代理。
 
-`bypass` 只在 Linux 的 `auto_redirect` 预匹配阶段生效。当前规则对私有地址和中国 IP 尝试内核直连，但排除端口 `853`，并且 Clash 为 Global 时不执行 bypass。命中 bypass 后不会继续执行后面的嗅探和路由规则。
-
-`bypass` 需要与当前固件内核匹配的：
-
-```text
-kmod-nfnetlink-queue
-kmod-nft-queue
-```
-
-OpenWrt/ImmortalWrt 可使用：
-
-```sh
-opkg update
-opkg install kmod-nfnetlink-queue kmod-nft-queue
-```
-
-如果日志出现 `pre-match disabled`，说明 NFQUEUE 预匹配没有启用，普通代理仍可能正常，但 bypass 不会生效。
+`bypass` 和 Momo 仅核心模式的内核要求见根目录 [FAQ](../../FAQ.md)。
 
 ## 运行前检查
 

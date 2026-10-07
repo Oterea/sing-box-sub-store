@@ -132,39 +132,13 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 
 详细说明见：[scripts/README.md](scripts/README.md)。
 
-## 1.14 模板的共同特性
+## FAQ
 
-- 国内 DNS 使用 `dns-ali` 和 `dns-pub` 竞速；
-- 境外及未命中域名使用 `dns-google`；
-- DNS 使用真实 IP，不使用 FakeIP；
-- DNS 策略为 `ipv4_only`，启用缓存和反向映射；
-- HTTPS/SVCB 查询默认返回空的 `NOERROR` 响应，因此启用 ECH 的节点可能需要使用真实 HTTPS 记录或传入 `strip-ech=on`；
-- 路由包含私有地址、国内域名和国内 IP 的直连规则；
-- DoT、UDP 443、STUN 和 QUIC 默认拒绝；
-- 模板没有显式设置 TUN `stack`，使用 sing-box 默认的 `sing-tun` 实现；相比用户态协议栈通常开销更低、性能更好。
-
-## Momo 仅核心模式
-
-使用 `momo-kernel-only-tmpl.json` 时：
-
-- 在 Momo 中开启“仅核心”；
-- 网络接管由 sing-box 配置负责；
-- sing-box TUN 使用 `172.31.0.1/30`；
-- mixed 入站监听 `0.0.0.0:7890`；
-- 不会自动修改宿主机系统代理；
-- `bypass` 需要 OpenWrt 内核支持 NFQUEUE。
-
-需要安装与当前内核匹配的：
-
-```text
-kmod-nfnetlink-queue
-kmod-nft-queue
-```
-
-安装后重启 Momo。若日志出现 `pre-match disabled`，说明 bypass 的内核预匹配没有启用，普通代理仍可能正常工作。
+常见参数、模板选择、DNS、TUN、ECH 和 Momo 仅核心模式说明见：[FAQ](FAQ.md)。
 
 ## 相关文档
 
+- [FAQ](FAQ.md)
 - [1.14 模板说明](templates/sing-box-1.14/README.md)
 - [DNS、TUN、mixed-in 分流流程](templates/sing-box-1.14/dns-routing-flow.md)
 - [sing-box TUN 文档](https://sing-box.sagernet.org/configuration/inbound/tun/)
