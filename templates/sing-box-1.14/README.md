@@ -42,9 +42,9 @@
 - 具体 DNS、路由、TUN、ECH 和性能说明见根目录 README 的 FAQ；
 - 完整的请求流程见下方文档。
 
-完整流程见：[dns-routing-flow.md](dns-routing-flow.md)。
+完整流程见：[dns-routing-flow.md](docs/dns-routing-flow.md)。
 
-mixed 入站收到域名后走 `direct` 的详细流程见：[mixed-in-direct-flow.md](mixed-in-direct-flow.md)。
+mixed 入站收到域名后走 `direct` 的详细流程见：[mixed-in-direct-flow.md](docs/mixed-in-direct-flow.md)。
 
 ## Momo 普通模式
 

@@ -216,7 +216,7 @@ sing-box check -c config.json
 ## 相关文档
 
 - [1.14 模板说明](templates/sing-box-1.14/README.md)
-- [DNS、TUN、mixed-in 分流流程](templates/sing-box-1.14/dns-routing-flow.md)
+- [DNS、TUN、mixed-in 分流流程](templates/sing-box-1.14/docs/dns-routing-flow.md)
 - [sing-box TUN 文档](https://sing-box.sagernet.org/configuration/inbound/tun/)
 - [sing-box bypass 文档](https://sing-box.sagernet.org/configuration/route/rule_action/#bypass)
 - [Momo](https://github.com/nikkinikki-org/OpenWrt-momo)
