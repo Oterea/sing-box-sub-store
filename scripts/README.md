@@ -2,6 +2,15 @@
 
 这里的脚本分为两类：处理订阅节点的脚本，以及生成或推送结果的文件脚本。
 
+## 目录
+
+- [推荐流程](#推荐流程)
+- [`rename.js`](#renamejs)
+- [`sing-box-col.js`](#sing-box-coljs)
+- [`push-info.js`](#push-infojs)
+- [脚本 FAQ](#脚本-faq)
+- [其他脚本](#其他脚本)
+
 ## 推荐流程
 
 单机场：
@@ -25,7 +34,12 @@ Sub-Store 已处理订阅
 https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/rename.js
 ```
 
-在 Sub-Store 的“订阅 → 节点操作”中添加。它会统一节点的机场前缀、地区名称和编号，使后续脚本能够生成地区策略组。
+在 Sub-Store 的“订阅 → 节点操作”中添加。它负责：
+
+- 统一机场前缀；
+- 统一地区名称；
+- 统一节点编号；
+- 为后续地区策略组提供稳定的节点名称。
 
 例如：
 
@@ -83,7 +97,18 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/rename.
 https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js
 ```
 
-在 Sub-Store 的“文件”中创建本地配置文件，把 1.14 模板内容作为文件内容，再添加这个脚本操作。脚本会读取处理后的订阅，把节点写入模板，并生成机场、地区和节点策略组。
+在 Sub-Store 的“文件”中：
+
+1. 创建本地配置文件；
+2. 把 1.14 模板内容作为文件内容；
+3. 添加这个脚本操作。
+
+脚本会：
+
+- 读取处理后的订阅；
+- 把节点写入模板；
+- 生成机场策略组；
+- 生成地区策略组和节点策略组。
 
 ### 参数
 
@@ -128,7 +153,11 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/push-info.js
 ```
 
-这是文件脚本，不参与节点改名和 sing-box 配置生成。它调用 Sub-Store 的流量接口，把机场流量、重置时间和到期时间推送到 Bark。
+这是文件脚本，不参与节点改名和 sing-box 配置生成。它会：
+
+- 调用 Sub-Store 的流量接口；
+- 读取机场流量、重置时间和到期时间；
+- 将结果推送到 Bark。
 
 常用参数：
 
@@ -147,11 +176,20 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/push-in
 
 ### 为什么 `rename.js` 和 `sing-box-col.js` 都有 `name`？
 
-它们作用不同。前者负责节点名称中的机场前缀，后者负责从 Sub-Store 查找订阅。单机场时通常把两者写成同一个名字；`rename.js` 不传时会自动使用订阅名称。
+它们作用不同：
+
+- `rename.js` 的 `name` 负责节点名称中的机场前缀；
+- `sing-box-col.js` 的 `name` 负责从 Sub-Store 查找订阅；
+- 单机场时通常把两者写成同一个名字；
+- `rename.js` 不传 `name` 时会自动使用当前订阅名称。
 
 ### 为什么不能把 `rename.js` 放到组合订阅上？
 
-组合订阅的节点已经由各子订阅处理。再次执行改名会破坏机场前缀和地区结构，导致机场策略组或地区策略组生成错误。
+组合订阅的节点已经由各子订阅处理。再次执行改名可能：
+
+- 覆盖机场前缀；
+- 破坏地区结构；
+- 导致机场策略组或地区策略组生成错误。
 
 ### 为什么先执行 rename，再执行旗帜操作？
 

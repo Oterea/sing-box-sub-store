@@ -2,6 +2,15 @@
 
 这些模板需要配合 [`scripts/sing-box-col.js`](../../scripts/sing-box-col.js) 使用。模板只提供基础配置，订阅节点和策略组由脚本生成。
 
+## 目录
+
+- [模板选择](#模板选择)
+- [脚本参数](#脚本参数)
+- [DNS 和路由](#dns-和路由)
+- [Momo 普通模式](#momo-普通模式)
+- [Momo 仅核心模式](#momo-仅核心模式)
+- [运行前检查](#运行前检查)
+
 ## 模板选择
 
 | 文件 | 使用场景 | 主要特点 |
@@ -26,13 +35,21 @@
 
 ## DNS 和路由
 
-模板使用真实 IP，不使用 FakeIP；具体 DNS、路由、TUN、ECH 和性能说明见根目录 [FAQ](../../FAQ.md)。
+模板的共同特点：
+
+- 使用真实 IP，不使用 FakeIP；
+- 具体 DNS、路由、TUN、ECH 和性能说明见根目录 README 的 FAQ；
+- 完整的请求流程见下方文档。
 
 完整流程见：[dns-routing-flow.md](dns-routing-flow.md)。
 
 ## Momo 普通模式
 
-使用 `momo-tmpl.json`，不要开启 Momo 的“仅核心”。透明代理接管由 Momo 管理，模板保留 Momo 使用的 DNS、Redirect、TProxy 和 TUN 入站。
+使用 `momo-tmpl.json` 时：
+
+- 不要开启 Momo 的“仅核心”；
+- 透明代理接管由 Momo 管理；
+- 模板保留 Momo 使用的 DNS、Redirect、TProxy 和 TUN 入站。
 
 ## Momo 仅核心模式
 
