@@ -308,7 +308,8 @@
     "outbounds": [
         {
             "type": "direct",
-            "tag": "direct"
+            "tag": "direct",
+            "domain_resolver": "dns-ali"
         }
     ]
 }

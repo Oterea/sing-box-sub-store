@@ -367,7 +367,7 @@
   //  只保留了被上面规则引用到的三个 tag：direct / proxy / AI
   // ══════════════════════════════════════════════════════════════
   "outbounds": [
-    { "type": "direct", "tag": "direct" },
+    { "type": "direct", "tag": "direct", "domain_resolver": "dns-ali" },
 
     { 
       "type": "vless",

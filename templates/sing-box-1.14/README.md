@@ -43,6 +43,8 @@
 
 完整流程见：[dns-routing-flow.md](dns-routing-flow.md)。
 
+mixed 入站收到域名后走 `direct` 的详细流程见：[mixed-in-direct-flow.md](mixed-in-direct-flow.md)。
+
 ## Momo 普通模式
 
 使用 `momo-tmpl.json` 时：
@@ -62,7 +64,7 @@
 - mixed 入站：`0.0.0.0:7890`；
 - 不设置 `platform.http_proxy`，不会自动修改宿主机系统代理。
 
-`bypass` 和 Momo 仅核心模式的内核要求见根目录 [FAQ](../../FAQ.md)。
+`bypass` 和 Momo 仅核心模式的内核要求见根目录 README 的 FAQ。
 
 ## 运行前检查
 
