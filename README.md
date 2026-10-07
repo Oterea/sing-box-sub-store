@@ -40,7 +40,7 @@ sing-box-col.js：写入模板并生成策略组
 
 2. 添加 Sub-Store 自带的旗帜操作，或在脚本 URL 后添加 `#flag`。
 
-需要自定义机场前缀时，在脚本 URL 后添加参数，例如：
+不传 `name` 时，脚本会自动使用当前 Sub-Store 订阅名称作为机场前缀。需要自定义机场前缀时，在脚本 URL 后添加参数，例如：
 
 ```text
 https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/rename.js#name=naixi
