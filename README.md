@@ -92,6 +92,8 @@ naixi Hong Kong 01  →  🇭🇰 naixi Hong Kong 01
 |---|---|---|
 | `name` | `naixi` | **Sub-Store 里那个订阅的名字**，用来找订阅 |
 | `type` | `col` | 只有组合订阅才需要填。单订阅不填 |
+| `smart` | `on` | 可选。传入 `smart=on` 才生成 `<机场> SMART` 节点选择组；默认不生成 |
+| `strip-ech` | `on` | 可选。传入 `strip-ech=on` 才删除节点中的 `tls.ech`，默认保留 |
 
 > 两个脚本都有 `name=`，含义**完全不同**：
 > - `rename.js` 的 `name=` → 写进节点名里的前缀（现在默认自动取订阅名）

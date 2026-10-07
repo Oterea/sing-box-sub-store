@@ -18,6 +18,8 @@ const { type, name } = $arguments;
 // 并发 10，全挂时一轮就要 2×15=30 秒 —— 设 5 秒和设 30 秒没有区别，
 // 只是在正常时把测速频率抬高了 6 倍，容易撞机场的限流。
 const AUTO_INTERVAL = $arguments.autointerval;
+// 默认不生成节点级 SMART 选择组；需要 sing-box-smart 面板时显式传 smart=on。
+const SMART_ENABLED = $arguments.smart === "on";
 
 // 根据 type 值匹配，转换为内部使用的类型
 let internalType = /^1$|col/i.test(type) ? "collection" : "subscription";
@@ -107,7 +109,30 @@ function airportOf(tag) {
 // 预处理节点
 // ===========================================
 
-let proxyNodes = originProxyNodes;
+// ECH 兼容开关：默认保留订阅提供的 ECH。
+//
+// 部分订阅的 ECH 节点要求客户端查询 HTTPS DNS 记录获取 ECH 配置；
+// 如果用户的 DNS 规则主动屏蔽 HTTPS/SVCB 记录，这类节点会报
+// "no ECH config found in DNS records"。用户可以显式传入 strip-ech=on，
+// 让这些节点回退到普通 TLS。只删除 tls.ech，保留服务器地址、SNI、
+// TLS、WebSocket 等其他节点参数。
+const STRIP_ECH = $arguments["strip-ech"] === "on";
+
+function stripEchFromNodes(nodes) {
+  if (!STRIP_ECH) return nodes;
+
+  return nodes.map((node) => {
+    if (!node || !node.tls || !node.tls.ech) return node;
+
+    // Sub-Store 运行环境不依赖 structuredClone，使用 JSON 深拷贝避免
+    // 直接修改 produceArtifact 返回的节点对象。
+    const copy = JSON.parse(JSON.stringify(node));
+    delete copy.tls.ech;
+    return copy;
+  });
+}
+
+let proxyNodes = stripEchFromNodes(originProxyNodes);
 // 通过节点 tag 提取国家/地区名集合（去掉节点编号部分）
 // 例如: 🇸🇬 Singapore 01 → 🇸🇬 Singapore
 let countries = new Set();
@@ -195,9 +220,10 @@ let manualPolicies = Array.from(airports, (airport) => {
   return policy;
 });
 
-// PIN 装【节点】，是 MANUAL 的下一层：MANUAL 能钉到「新加坡」，钉不到「新加坡 16」。
+// SMART 装【节点】，是 MANUAL 的下一层：MANUAL 能选到「新加坡」，
+// SMART 才能选到「新加坡 16」。默认关闭，避免普通订阅无条件生成节点级策略组。
 //
-// 为什么需要钉到节点这一层：urltest 只按延迟选，没有「可靠性」这个概念。
+// 为什么需要节点级 SMART 组：urltest 只按延迟选，没有「可靠性」这个概念。
 // protocol/group/urltest.go 里 Select 的判据只有 history.Delay 一个量，而
 // URLTestHistory 这个结构里也确实只有 Delay —— 成功率根本没有地方存。
 // 结果就是一个延迟低但丢包的节点，会稳定赢过延迟略高但不掉线的节点。
@@ -212,9 +238,9 @@ let manualPolicies = Array.from(airports, (airport) => {
 //     if !ok { render.JSON(w, r, newError("Must be a Selector")) }
 // 实测确认：对 urltest 组 PUT 返回 400 "Must be a Selector"。
 //
-// 所以 PIN 存在的唯一理由，是给外部程序一个能钉到节点这一层的抓手。
-let pinPolicies = Array.from(airports, (airport) => {
-  let policy = new Policy(`${airport} PIN`, "selector");
+// 所以 SMART 存在的唯一理由，是给外部程序一个能钉到节点这一层的抓手。
+let smartPolicies = SMART_ENABLED ? Array.from(airports, (airport) => {
+  let policy = new Policy(`${airport} SMART`, "selector");
 
   policy.outbounds.push(
     ...proxyNodes
@@ -223,7 +249,7 @@ let pinPolicies = Array.from(airports, (airport) => {
   );
 
   return policy;
-});
+}) : [];
 
 // openai 分组，专门收集非香港的节点
 let aiPolicies = new Policy("AI", "selector");
@@ -258,7 +284,7 @@ proxyPolicies.outbounds.push(
   ...(allAutoPolicy ? [allAutoPolicy.tag] : []),
   ...autoTags,
   ...manualPolicies.map(p => p.tag),
-  ...pinPolicies.map(p => p.tag)
+  ...smartPolicies.map(p => p.tag)
 );
 
 
@@ -300,7 +326,7 @@ config.outbounds.push(
   ...(allAutoPolicy ? [allAutoPolicy] : []),
   ...autoPolicies,
   ...manualPolicies,
-  ...pinPolicies,
+  ...smartPolicies,
   ...countryPolicies,
   ...proxyNodes
 );
