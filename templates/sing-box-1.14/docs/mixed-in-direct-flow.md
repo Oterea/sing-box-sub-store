@@ -2,6 +2,8 @@
 
 本文记录无 FakeIP 配置下，浏览器通过 `mixed-in` 访问 Bilibili 时，域名规则、`direct` 和 `domain_resolver` 的关系。
 
+outbounds 中的 outbound 们 都有拨号字段，包括最重要的 domain resolver。如果没写需要使用 route.default_domain_resolver 的值，如果某个 outbound 作为别人的 detour 目标 ，那这个 outbound 必须配置拨号字段 domain resolver。一旦设置了 detour ，自己的拨号字段都会被忽略，用别人的。
+
 ## 示例配置
 
 ```json
@@ -157,4 +159,3 @@ detour to an empty direct outbound makes no sense
 - [默认解析器和显式解析器的选择](https://github.com/SagerNet/sing-box/blob/testing/common/dialer/dialer.go)：优先使用自身 `domain_resolver`，没有时使用默认解析器。
 - [域名拨号时执行解析](https://github.com/SagerNet/sing-box/blob/testing/common/dialer/resolve.go)：目标是域名时查询 DNS，再使用得到的地址建立连接。
 - [detour 和空 direct 检查](https://github.com/SagerNet/sing-box/blob/testing/common/dialer/detour.go)：`detour` 使用目标 outbound，并检查目标是否为空 direct。
-

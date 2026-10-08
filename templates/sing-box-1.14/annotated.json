@@ -219,6 +219,9 @@
 
   "route": {
     "default_domain_resolver": { "server": "dns-ali" },
+    // outbounds 中的 outbound 们 都有拨号字段，包括最重要的 domain resolver。
+    // 如果没写需要使用 route.default_domain_resolver 的值，如果某个 outbound 作为别人的 detour 目标 ，那这个 outbound 必须配置拨号字段 domain resolver。
+    // 一旦设置了 detour ，自己的拨号字段都会被忽略，用别人的。
     "default_http_client": "default",
     "auto_detect_interface": true,
     "final": "proxy",
