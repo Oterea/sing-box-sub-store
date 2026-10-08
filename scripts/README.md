@@ -117,15 +117,31 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 | `name=xxx` | 无 | 读取指定的 Sub-Store 订阅或组合订阅 |
 | `type=col` | 单订阅 | 按组合订阅生成多机场策略组 |
 | `autointerval=30s` | 不写入 | 覆盖 sing-box AUTO、地区组和 ALL AUTO 的测速间隔 |
+| `auto=region\|node` | `region` | `<机场> AUTO` 按地区组测速，或直接测速机场全部节点 |
+| `manual=region\|node` | `node` | `<机场> MANUAL` 按地区选择，或直接平铺节点 |
 | `smart=on` | 关闭 | 生成 `<机场> SMART` 节点选择组，供 sing-box-smart 使用 |
 | `strip-ech=on` | 关闭 | 删除节点中的 `tls.ech` |
 
 `autointerval` 不传时不会向生成的策略组写入 `interval`，由 sing-box 使用自己的默认值。`smart` 和 `strip-ech` 都必须显式传入 `on` 才会生效。
 
+`auto` 和 `manual` 只接受 `region` 或 `node`。默认组合为 `auto=region&manual=node`。`ALL AUTO` 始终引用各机场 AUTO，不受 `manual` 影响。
+
 单机场示例：
 
 ```text
 https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js#name=naixi
+```
+
+需要手动按地区选择时：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js#name=naixi&manual=region
+```
+
+需要 AUTO 直接测速机场全部节点时：
+
+```text
+https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-box-col.js#name=naixi&auto=node
 ```
 
 组合订阅示例：

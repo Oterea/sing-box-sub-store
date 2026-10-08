@@ -31,6 +31,8 @@
 | `name=xxx` | Sub-Store 中的订阅名称 |
 | `type=col` | 处理组合订阅 |
 | `autointerval=30s` | 设置自动测速间隔 |
+| `auto=region\|node` | `<机场> AUTO` 默认按地区组测速，也可直接测速全部节点 |
+| `manual=region\|node` | `<机场> MANUAL` 默认平铺节点，也可按地区选择 |
 | `smart=on` | 生成 `<机场> SMART` 节点选择组，默认不生成 |
 | `strip-ech=on` | 删除节点的 `tls.ech`，默认保留 |
 

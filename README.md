@@ -106,6 +106,8 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 | `name=xxx` | 是 | Sub-Store 中的订阅名称 |
 | `type=col` | 组合订阅时需要 | 按组合订阅生成多机场策略组 |
 | `autointerval=30s` | 可选 | 设置 AUTO、地区组和 ALL AUTO 的测速间隔 |
+| `auto=region\|node` | `region` | `<机场> AUTO` 使用地区组或节点作为测速成员 |
+| `manual=region\|node` | `node` | `<机场> MANUAL` 使用地区组或节点作为手动选择成员 |
 | `smart=on` | 可选 | 生成 `<机场> SMART` 节点选择组，默认不生成 |
 | `strip-ech=on` | 可选 | 删除节点中的 `tls.ech`，默认保留 |
 
@@ -126,7 +128,7 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 脚本会根据订阅内容生成：
 
 - `<机场> AUTO`：机场内节点自动测速；
-- `<机场> MANUAL`：按地区选择；
+- `<机场> MANUAL`：默认平铺节点，也可用 `manual=region` 按地区选择；
 - `<机场> SMART`：仅在传入 `smart=on` 时生成，供 [sing-box-smart](https://github.com/Oterea/sing-box-smart) 使用；
 - `ALL AUTO`：多个机场时生成，自动选择最快机场；
 - `proxy`：主代理选择组；
@@ -134,6 +136,8 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 - 地区自动测速组。
 
 没有节点的策略组会自动加入 `COMPATIBLE` 直连出站，避免 sing-box 因空策略组无法启动。
+
+`<机场> AUTO` 默认引用地区组；传入 `auto=node` 后直接测速该机场全部节点。`ALL AUTO` 始终引用各机场 AUTO，不受 `manual` 参数影响。
 
 ## 模板选择
 

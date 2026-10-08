@@ -7,6 +7,17 @@
 // 从外部参数中解构获取 type 和 name
 const { type, name } = $arguments;
 
+// 机场 AUTO / MANUAL 的成员层级。
+// 默认 AUTO 按地区测速，MANUAL 平铺节点；两个参数彼此独立。
+// 只接受 region 或 node，其他值按默认值处理，避免生成空策略组。
+const GROUP_LAYOUT = { REGION: "region", NODE: "node" };
+const AUTO_LAYOUT = $arguments.auto === GROUP_LAYOUT.NODE
+  ? GROUP_LAYOUT.NODE
+  : GROUP_LAYOUT.REGION;
+const MANUAL_LAYOUT = $arguments.manual === GROUP_LAYOUT.REGION
+  ? GROUP_LAYOUT.REGION
+  : GROUP_LAYOUT.NODE;
+
 // 测速间隔，同时作用于 <机场> AUTO、地区组和 ALL AUTO。
 // 不传就不写这个字段，用 sing-box 自己的默认值（C.DefaultURLTestInterval = 3 分钟）。
 //
@@ -136,7 +147,7 @@ let proxyNodes = stripEchFromNodes(originProxyNodes);
 // 通过节点 tag 提取国家/地区名集合（去掉节点编号部分）
 // 例如: 🇸🇬 Singapore 01 → 🇸🇬 Singapore
 let countries = new Set();
-// 地区键按机场分桶，省得 manualPolicies 再去地区名里数第 2 个词
+// 地区键按机场分桶，省得策略组生成时再去地区名里数第 2 个词
 const countriesOfAirport = new Map();
 proxyNodes.forEach((obj) => {
   // 去掉末尾编号得到地区名。节点名里没有空格时切出来是空串（rename.js 的 nm
@@ -153,6 +164,17 @@ proxyNodes.forEach((obj) => {
 // 机场清单：从索引来，不再从节点名解析。
 // 只收真的有节点的 —— 订阅拉到 0 个节点时不该建一个空的 <机场> AUTO
 let airports = new Set(proxyNodes.map((node) => airportOf(node.tag)).filter(Boolean));
+
+// 返回某个机场在指定层级下的成员。
+// region：机场 -> 地区组；node：机场 -> 真实节点。
+function airportMembers(airport, layout) {
+  if (layout === GROUP_LAYOUT.NODE) {
+    return proxyNodes
+      .filter((node) => airportOf(node.tag) === airport)
+      .map((node) => node.tag);
+  }
+  return Array.from(countriesOfAirport.get(airport) || []);
+}
 
 // ===========================================
 // 策略组构造函数
@@ -178,7 +200,7 @@ function Policy(tag, type) {
 
 let proxyPolicies = new Policy("proxy", "selector"); // 用户手动选择代理的分组
 
-// AUTO 装【地区组】，不是节点。
+// AUTO 默认装【地区组】，也可以通过 auto=node 改为直接装节点。
 //
 // 曾经改成过扁平（直接装该机场所有节点），理由是少一道 tolerance 门槛、
 // 延迟判断更准。后来读 sing-box 源码发现那个理由站不住，而代价很实在：
@@ -204,18 +226,16 @@ let autoPolicies = Array.from(airports, (airport) => {
   let policy = new Policy(`${airport} AUTO`, "urltest");
   if (AUTO_INTERVAL) policy.interval = AUTO_INTERVAL;
 
-  policy.outbounds.push(...Array.from(countriesOfAirport.get(airport) || []));
+  policy.outbounds.push(...airportMembers(airport, AUTO_LAYOUT));
 
   return policy;
 });
 
 let manualPolicies = Array.from(airports, (airport) => {
-  // 拼接策略组名字，比如加上 "Manual-"
   let policyName = `${airport} MANUAL`;
   let policy = new Policy(policyName, "selector");
 
-  // 该机场有哪些地区组，建索引时已经分好桶了
-  policy.outbounds.push(...Array.from(countriesOfAirport.get(airport) || []));
+  policy.outbounds.push(...airportMembers(airport, MANUAL_LAYOUT));
 
   return policy;
 });
