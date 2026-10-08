@@ -297,13 +297,15 @@ if (allAutoPolicy) {
 }
 
 // ALL AUTO 排第一 —— selector 默认选中第一项，装完开箱即用就是全局最快。
-let autoTags = [];
-autoPolicies.forEach((policy) => autoTags.push(policy.tag));
+// 两个列表均按 airports 的顺序生成，按相同索引配对，无需重复搜索。
+const airportPolicyOrder = autoPolicies.flatMap((policy, index) => [
+  policy,
+  manualPolicies[index],
+]);
 
 proxyPolicies.outbounds.push(
   ...(allAutoPolicy ? [allAutoPolicy.tag] : []),
-  ...autoTags,
-  ...manualPolicies.map(p => p.tag),
+  ...airportPolicyOrder.map(p => p.tag),
   ...smartPolicies.map(p => p.tag)
 );
 
@@ -344,8 +346,7 @@ config.outbounds.push(
   proxyPolicies,
   aiPolicies,
   ...(allAutoPolicy ? [allAutoPolicy] : []),
-  ...autoPolicies,
-  ...manualPolicies,
+  ...airportPolicyOrder,
   ...smartPolicies,
   ...countryPolicies,
   ...proxyNodes
