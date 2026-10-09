@@ -46,7 +46,7 @@
 
 完整流程见：[dns-routing-flow.md](docs/dns-routing-flow.md)。
 
-mixed 入站收到域名后走 `direct` 的详细流程见：[mixed-in-direct-flow.md](docs/mixed-in-direct-flow.md)。
+mixed 入站、HTTP Client、detour 与域名解析的详细流程见：[outbound-domain-resolver-flow.md](docs/outbound-domain-resolver-flow.md)。
 
 ## Momo 普通模式
 
