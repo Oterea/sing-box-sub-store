@@ -19,7 +19,7 @@
 | `linux-tmpl.json` | Linux 独立运行 sing-box | TUN、`auto_route`、`auto_redirect`、`bypass` |
 | `momo-tmpl.json` | Momo 普通代理模式 | 由 Momo 管理透明代理接管 |
 | `momo-old-tmpl.json` | 旧版 Momo 模板回退或对比 | 保留历史配置，不建议新部署使用 |
-| `momo-kernel-only-tmpl.json` | Momo 仅核心模式 | 由 sing-box 管理 TUN 和自动重定向 |
+| `momo-core-tmpl.json` | Momo 仅核心模式 | 由 sing-box 管理 TUN 和自动重定向 |
 | `annotated.json` | 阅读配置机制 | JSONC 注释版，不能直接运行 |
 
 ## 脚本参数
@@ -58,7 +58,7 @@ mixed 入站、HTTP Client、detour 与域名解析的详细流程见：[outboun
 
 ## Momo 仅核心模式
 
-使用 `momo-kernel-only-tmpl.json`，并在 Momo 中开启“仅核心”。网络接管由 sing-box 负责：
+使用 `momo-core-tmpl.json`，并在 Momo 中开启“仅核心”。网络接管由 sing-box 负责：
 
 - TUN 地址：`172.31.0.1/30`；
 - TUN 接口名：`momo`；

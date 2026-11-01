@@ -85,7 +85,7 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/rename.
 | iPhone、macOS 等官方客户端 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/universal-tmpl.json` |
 | Linux 独立运行 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/linux-tmpl.json` |
 | Momo 普通模式 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/momo-tmpl.json` |
-| Momo 仅核心模式 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/momo-kernel-only-tmpl.json` |
+| Momo 仅核心模式 | `https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/templates/sing-box-1.14/momo-core-tmpl.json` |
 
 然后给这个文件添加脚本操作：
 
@@ -147,7 +147,7 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 | `sing-box-1.14/linux-tmpl.json` | Linux 独立运行 sing-box | `auto_route`、`auto_redirect` 和 `bypass` |
 | `sing-box-1.14/momo-tmpl.json` | Momo 普通代理模式 | 由 Momo 管理透明代理接管 |
 | `sing-box-1.14/momo-old-tmpl.json` | 旧版 Momo 模板回退或对比 | 保留历史配置，不建议新部署使用 |
-| `sing-box-1.14/momo-kernel-only-tmpl.json` | Momo 仅核心模式 | 由 sing-box 管理 TUN 和自动重定向 |
+| `sing-box-1.14/momo-core-tmpl.json` | Momo 仅核心模式 | 由 sing-box 管理 TUN 和自动重定向 |
 | `sing-box-1.14/annotated.json` | 阅读配置说明 | JSONC 注释版，不能直接运行 |
 
 旧版本模板位于 `templates/sing-box-1.11/`、`1.12/` 和 `1.13/`。新配置建议使用 1.14 模板。
@@ -188,7 +188,7 @@ https://raw.githubusercontent.com/Oterea/sing-box-sub-store/main/scripts/sing-bo
 - `universal-tmpl.json`：iPhone、macOS 等 sing-box 客户端。
 - `linux-tmpl.json`：Linux 独立运行 sing-box。
 - `momo-tmpl.json`：Momo 普通代理模式。
-- `momo-kernel-only-tmpl.json`：Momo 仅核心模式，由 sing-box 负责 TUN 和自动重定向。
+- `momo-core-tmpl.json`：Momo 仅核心模式，由 sing-box 负责 TUN 和自动重定向。
 
 ### 模板是否使用 FakeIP？
 
